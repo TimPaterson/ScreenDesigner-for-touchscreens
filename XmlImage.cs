@@ -2,9 +2,13 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
+using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
@@ -18,6 +22,8 @@ namespace ScreenDesigner
 
 		class XmlGraphic
 		{
+			string m_xmlClone;
+
 			public virtual int Height 
 			{ 
 				get { return (int)Graphic.Height; }
@@ -28,6 +34,11 @@ namespace ScreenDesigner
 			{ 
 				get { return (int)Graphic.Width; }
 				set { Graphic.Width = value; }
+			}
+
+			public virtual string Value
+			{
+				set { }
 			}
 
 			public FrameworkElement Graphic { get; set; }
@@ -51,26 +62,53 @@ namespace ScreenDesigner
 				{
 					if (prop.PropertyType == typeof(string))
 						prop.SetValue(obj, Value);
+					else if (prop.PropertyType == typeof(Brush))
+						prop.SetValue(obj, new SolidColorBrush(ColorFromString(Value)));
 					else
 						prop.SetValue(obj, Convert.ChangeType(int.Parse(Value), prop.PropertyType));
 				}
 			}
 
-			public void Draw(ContainerVisual DrawList, int x, int y)
+			public virtual void Draw(DrawResults DrawList, int x, int y)
 			{
 				if (Graphic != null)
 				{
 					Graphic.Arrange(new Rect(x, y, Width, Height));
-					DrawList.Children.Add(Graphic);
+					DrawList.Visual.Children.Add(Graphic);
 				}
 			}
 
 			protected static Color ColorFromString(string color)
 			{
 				int val;
+				PropertyInfo prop;
 
-				val = (int)new Int32Converter().ConvertFromString(color);
-				return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
+				try
+				{
+					val = (int)new Int32Converter().ConvertFromString(color);
+					return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
+				}
+				catch { }
+
+				// Try looking it up by name
+				prop = typeof(Colors).GetProperty(color);
+				if (prop == null)
+					throw new Exception("Invalid color");
+				return (Color)prop.GetValue(null);
+			}
+
+			public XmlGraphic Clone()
+			{
+				XmlGraphic graphic;
+
+				graphic = (XmlGraphic)MemberwiseClone();
+				if (Graphic != null)
+				{
+					if (m_xmlClone == null)
+						m_xmlClone = XamlWriter.Save(Graphic);
+					graphic.Graphic = (FrameworkElement)XamlReader.Load(new XmlTextReader(new StringReader(m_xmlClone)));
+				}
+				return graphic;
 			}
 		}
 
@@ -83,16 +121,6 @@ namespace ScreenDesigner
 				rect = new Rectangle();
 				rect.StrokeThickness = 0;
 				Graphic = rect;
-			}
-
-			public string Stroke
-			{
-				set { ((Rectangle)Graphic).Stroke = new SolidColorBrush(ColorFromString(value)); }
-			}
-
-			public string Fill
-			{
-				set { ((Rectangle)Graphic).Fill = new SolidColorBrush(ColorFromString(value)); }
 			}
 		}
 
@@ -117,36 +145,181 @@ namespace ScreenDesigner
 					Height = Owner.Parent.Graphic.Height;
 				}
 			}
+
+			public string FontFamily
+			{
+				set { ((TextBlock)Graphic).FontFamily = new FontFamily(value); }
+			}
 		}
 
 		class XmlHotSpot : XmlGraphic
 		{
 			public override int Height { get; set; }
 			public override int Width { get; set; }
+		}
 
+		class XmlRef : XmlGraphic
+		{
+			public string RefName
+			{
+				set
+				{
+					XmlImage.Components[value].CloneTo(Owner);
+				}
+			}
+		}
+
+		class XmlSet : XmlGraphic
+		{
+			static Regex s_regAssign = new Regex(@"([a-zA-Z0-9_$]+).([a-zA-Z0-9_$]+)\s*=\s*(.+)$");
+			static Regex s_regAssignRef = new Regex(@"([a-zA-Z0-9_$]+)\s*=\s*(.+)$");
+
+			public string RefName { get; set; }
+
+			public override string Value
+			{
+				set
+				{
+					Match match;
+					Element el;
+					string attr;
+					string val;
+					string refName;
+					string[] arExpr;
+					string exprTrim;
+
+					arExpr = value.Split(';');
+					foreach (string expr in arExpr)
+					{
+						exprTrim = expr.Trim();
+						if (exprTrim.Length == 0)
+							continue;
+
+						if (RefName == null)
+						{
+							match = s_regAssign.Match(exprTrim);
+							if (!match.Success)
+								throw new Exception("Invalid Set"); // UNDONE: improve error reporting
+							refName = match.Groups[1].Value;
+							attr = match.Groups[2].Value;
+							val = match.Groups[3].Value;
+						}
+						else
+						{
+							match = s_regAssignRef.Match(exprTrim);
+							if (!match.Success)
+								throw new Exception("Invalid Set"); // UNDONE: improve error reporting
+							refName = RefName;
+							attr = match.Groups[1].Value;
+							val = match.Groups[2].Value;
+						}
+						Debug.WriteLine($"{refName}.{attr} = {val}");
+						el = Owner.Parent.FindChild(refName);
+						if (el != null)
+							el.SetAttribute(attr, val);
+					}
+				}
+			}
+		}
+
+		class XmlData : XmlGraphic
+		{
+			public override string Value
+			{
+				set
+				{
+					Owner.Parent.Value = value;
+				}
+			}
+		}
+
+		class XmlGrid : XmlGraphic
+		{
+			public int RowHeight { get; set; }
+			public int ColumnWidth { get; set; }
+			public override void Draw(DrawResults DrawList, int x, int y) 
+			{
+				int iRowCur;
+
+				// Update positions of the columns
+				iRowCur = 0;
+				foreach (Element el in Owner.Children)
+				{
+					if (el.Graphic as XmlRow != null)
+					{
+						el.Top += iRowCur;
+						iRowCur += ColumnWidth;
+					}
+					else if (el.Graphic as XmlDefault != null)
+						el.Children.Clear();
+				}
+			}
+		}
+
+		class XmlRow : XmlGraphic
+		{
+			public override void Draw(DrawResults DrawList, int x, int y) 
+			{
+				XmlGrid grid;
+				int iColCur;
+				int iColWidth;
+
+				// Update positions of the columns
+				grid = Owner.Parent.Graphic as XmlGrid;
+				if (grid == null)
+					throw new Exception("Row must be within Grid");
+				iColWidth = grid.ColumnWidth;
+
+				iColCur = 0;
+				foreach (Element el in Owner.Children)
+				{
+					el.Left += iColCur;
+					iColCur += iColWidth;
+				}
+			}
+		}
+
+		class XmlColumn : XmlGraphic
+		{
+			public override Element Owner 
+			{
+				get { return base.Owner; }
+				set
+				{
+					Element grid;
+					Element content;
+
+					// Get default content
+					grid = value.Parent.Parent;
+					content = grid.Children[0];
+					if (content.Graphic.GetType() == typeof(XmlDefault))
+					{
+						// Default contents exists, substitute it
+						content.CloneTo(value);
+					}
+					else
+						base.Owner = value;
+				}
+			}
+		}
+
+		class XmlDefault : XmlGraphic
+		{
 		}
 
 		class Element
 		{
-			internal class ChildCollection : KeyedCollection<string, Element>
-			{
-				protected override string GetKeyForItem(Element item)
-				{
-					return item.Name;
-				}
-			}
-			
 			public Element(string type, Element parent)
 			{
 				Type typGraphic;
 
 				Parent = parent;
+				Children = new List<Element>();
 				if (ElementTypes.TryGetValue(type, out typGraphic))
 				{
 					Graphic = (XmlGraphic)Activator.CreateInstance(typGraphic);
 					Graphic.Owner = this;
 				}
-				Children = new ChildCollection();
 			}
 
 			#region Public Properties
@@ -156,9 +329,17 @@ namespace ScreenDesigner
 			public int Left { get; set; }
 			public int Width { get { return (int)Graphic.Width; } }
 			public int Height { get { return (int)Graphic.Height; } }
-			public ChildCollection Children { get; protected set; }
+			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
+			public string Value
+			{
+				set 
+				{
+					if (Graphic != null)
+						Graphic.Value = value;
+				}
+			}
 
 			#endregion
 
@@ -168,7 +349,37 @@ namespace ScreenDesigner
 				{ "TextBlock",	typeof(XmlTextBlock) },
 				{ "HotSpot",	typeof(XmlHotSpot) },
 				{ "Image",		typeof(XmlRectangle) },
+				{ "Ref",		typeof(XmlRef) },
+				{ "Set",		typeof(XmlSet) },
+				{ "#text",		typeof(XmlData) },
+				{ "Grid",       typeof(XmlGrid) },
+				{ "Row",		typeof(XmlRow) },
+				{ "Column",		typeof(XmlColumn) },
+				{ "Default",	typeof(XmlDefault) },
 			};
+
+			public Element CloneTo(Element el)
+			{
+				el.Name = Name;
+				el.Top = Top;
+				el.Left = Left;
+				el.Graphic = Graphic;
+				if (Graphic != null)
+				{
+					el.Graphic = Graphic.Clone();
+					el.Graphic.Owner = el;
+				}
+				el.Children.Clear();
+				foreach (Element elChild in Children)
+					el.Children.Add(elChild.Clone(el));
+
+				return el;
+			}
+
+			public Element Clone(Element parent)
+			{
+				return CloneTo(new Element("", parent));
+			}
 
 			public void SetAttribute(string Attr, string Value)
 			{
@@ -191,11 +402,28 @@ namespace ScreenDesigner
 				}
 			}
 
-			public void Draw(ContainerVisual DrawList, int x, int y)
+			public Element FindChild(string name)
+			{
+				Element el;
+
+				foreach (Element elChild in Children)
+				{
+					if (elChild.Name == name)
+						return elChild;
+
+					el = elChild.FindChild(name);
+					if (el != null)
+						return el;
+				}
+				return null;
+			}
+
+			public void Draw(DrawResults DrawList, int x, int y)
 			{
 				x += Left;
 				y += Top;
-				Graphic.Draw(DrawList, x, y);
+				if (Graphic != null)
+					Graphic.Draw(DrawList, x, y);
 				foreach (Element el in Children)
 					el.Draw(DrawList, x, y);
 			}
@@ -216,6 +444,17 @@ namespace ScreenDesigner
 			public RenderTargetBitmap Bitmap { get; set; }
 		}
 
+		class DrawResults
+		{
+			public DrawResults()
+			{
+				Visual = new ContainerVisual();
+			}
+			public ContainerVisual Visual { get; protected set; }
+			// UNDONE: collection for hotspots
+			// UNDONE: collection for reference points
+		}
+
 		#endregion
 
 
@@ -232,7 +471,7 @@ namespace ScreenDesigner
 
 		#region Fields
 
-		Dictionary<string, Element> Components;
+		static Dictionary<string, Element> Components;
 		List<NamedBitmap> Images;
 
 		#endregion
@@ -277,14 +516,14 @@ namespace ScreenDesigner
 		void DefineImage(XmlNode node)
 		{
 			Element el;
-			ContainerVisual DrawList;
+			DrawResults DrawList;
 			NamedBitmap bmp;
 
 			el = BuildElement(node);
-			DrawList = new ContainerVisual();
+			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
 			bmp = new NamedBitmap(el.Name, el.Width, el.Height);
-			bmp.Bitmap.Render(DrawList);
+			bmp.Bitmap.Render(DrawList.Visual);
 			Images.Add(bmp);
 		}
 
@@ -293,8 +532,14 @@ namespace ScreenDesigner
 			Element el;
 
 			el = new Element(node.Name, parent);
-			foreach (XmlAttribute attr in node.Attributes)
-				el.SetAttribute(attr.Name, attr.Value);
+			if (node.Attributes != null)
+			{
+				foreach (XmlAttribute attr in node.Attributes)
+					el.SetAttribute(attr.Name, attr.Value);
+			}
+
+			if (node.Value != null)
+				el.Value = node.Value;
 
 			foreach (XmlNode nodeChild in node.ChildNodes)
 				el.Children.Add(BuildElement(nodeChild, el));
