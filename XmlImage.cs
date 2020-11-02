@@ -213,7 +213,6 @@ namespace ScreenDesigner
 							attr = match.Groups[1].Value;
 							val = match.Groups[2].Value;
 						}
-						Debug.WriteLine($"{refName}.{attr} = {val}");
 						el = Owner.Parent.FindChild(refName);
 						if (el != null)
 							el.SetAttribute(attr, val);
@@ -383,15 +382,17 @@ namespace ScreenDesigner
 
 			public void SetAttribute(string Attr, string Value)
 			{
+				if (Attr == "Name")
+				{
+					Name = Value;
+					return;		// don't set it in Graphics
+				}
+
 				Graphic?.SetAttribute(Attr, Value);
 
 				// Assign our own properties
 				switch (Attr)
 				{
-					case "Name":
-						Name = Value;
-						break;
-
 					case "Top":
 						Top = int.Parse(Value);
 						break;

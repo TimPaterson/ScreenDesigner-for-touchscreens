@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -19,7 +20,8 @@ namespace ScreenDesigner
 	public partial class MainWindow : Window
 	{
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
-		const int ImageSpacing = 10;
+		const int GroupExtraHeight = 30;
+		const int GroupExtraWidth = 20;
 
 		public MainWindow()
 		{
@@ -48,6 +50,7 @@ namespace ScreenDesigner
 
 		FileSystemWatcher m_watcher;
 		Dispatcher m_dispatcher;
+		List<XmlImage.NamedBitmap> m_Images;
 
 		#endregion
 
@@ -58,7 +61,6 @@ namespace ScreenDesigner
 		{
 			XmlDocument doc;
 			XmlImage parser;
-			List<XmlImage.NamedBitmap> Images;
 
 			doc = new XmlDocument();
 			try
@@ -80,15 +82,17 @@ namespace ScreenDesigner
 			try
 			{
 				parser = new XmlImage();
-				Images = parser.ParseXml(doc);
-				//img1.Width = Images[0].Width;
-				//img1.Height = Images[0].Height;
-				img1.Source = Images[0].Bitmap;
+				m_Images = parser.ParseXml(doc);
+				StartImageDisplay();
+				foreach (XmlImage.NamedBitmap bmp in m_Images)
+					DisplayImage(bmp);
+				EndImageDisplay();
 			}
 			catch (Exception exc)
 			{
 				// UNDONE: parsing error
 				Debug.WriteLine(exc.Message);
+				Debug.WriteLine(exc.InnerException.Message);
 			}
 			return true;
 		}
@@ -111,6 +115,44 @@ namespace ScreenDesigner
 		void LoadXmlDefault()
 		{
 			LoadXml(Settings.Default.XmlFileName);
+		}
+
+		void StartImageDisplay()
+		{
+			pnlImages.Children.Clear();
+		}
+
+		void EndImageDisplay()
+		{
+			SizeToContent = SizeToContent.WidthAndHeight;
+		}
+
+		void DisplayImage(XmlImage.NamedBitmap bmp)
+		{
+			GroupBox group;
+			Border border;
+			Image image;
+
+			image = new Image();
+			image.Width = bmp.Width;
+			image.Height = bmp.Height;
+			image.Source = bmp.Bitmap;
+
+			border = new Border();
+			border.BorderThickness = new Thickness(1);
+			border.BorderBrush = new SolidColorBrush(Colors.Black);
+			border.Width = bmp.Width;
+			border.Height = bmp.Height;
+			border.Child = image;
+
+			group = new GroupBox();
+			group.Header = bmp.Name;
+			group.Width = bmp.Width + GroupExtraWidth;
+			group.Height = bmp.Height + GroupExtraHeight;
+			group.Content = border;
+			group.HorizontalAlignment = HorizontalAlignment.Left;
+
+			pnlImages.Children.Add(group);
 		}
 
 		#endregion
@@ -184,10 +226,19 @@ namespace ScreenDesigner
 
 		private void btnSave_Click(object sender, RoutedEventArgs e)
 		{
-			BmpBitmapEncoder encode = new BmpBitmapEncoder();
-			encode.Frames.Add(BitmapFrame.Create((RenderTargetBitmap)img1.Source));
-			using (Stream stream = File.OpenWrite("Output.bmp"))
-				encode.Save(stream);
+			string path;
+			string filename;
+
+			path = Path.GetDirectoryName(Settings.Default.XmlFileName);
+
+			foreach (XmlImage.NamedBitmap bmp in m_Images)
+			{
+				BmpBitmapEncoder encode = new BmpBitmapEncoder();
+				encode.Frames.Add(BitmapFrame.Create(bmp.Bitmap));
+				filename = Path.Combine(path, bmp.Name) + ".bmp";
+				using (Stream stream = File.Open(filename, FileMode.Create))
+					encode.Save(stream);
+			}
 		}
 
 		private void btnBrowse_Click(object sender, RoutedEventArgs e)

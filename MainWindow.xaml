@@ -5,15 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ScreenDesigner"
         mc:Ignorable="d"
-        Title="MainWindow" Height="262.5" Width="284" Closing="Window_Closing" Initialized="Window_Initialized" Loaded="Window_Loaded">
+        Title="Graphic Designer" Height="262.5" Width="284" Closing="Window_Closing" Initialized="Window_Initialized" Loaded="Window_Loaded">
 	<Grid>
 		<Button x:Name="btnLoadXml" Content="Load XML..." HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="71" Click="btnLoadXml_Click"/>
 		<Button x:Name="btnSave" Content="Save Bitmap" HorizontalAlignment="Left" Margin="106,10,0,0" VerticalAlignment="Top" Width="76" Click="btnSave_Click"/>
 		<Button x:Name="btnBrowse" Content="..." HorizontalAlignment="Left" Margin="182,10,0,0" VerticalAlignment="Top" Click="btnBrowse_Click"/>
-		<GroupBox x:Name="grpImage" Header="Screen" Margin="10,35,10,10" Background="{DynamicResource {x:Static SystemColors.ControlLightBrushKey}}">
-			<Border x:Name="brdImage" BorderThickness="1" BorderBrush="Black" Padding="0">
-				<Image x:Name="img1" Margin="0"/>
-			</Border>
-		</GroupBox>
+		<StackPanel x:Name="pnlImages" Margin="10,35,10,10">
+		</StackPanel>
 	</Grid>
 </Window>
