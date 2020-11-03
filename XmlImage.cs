@@ -156,6 +156,20 @@ namespace ScreenDesigner
 		{
 			public override int Height { get; set; }
 			public override int Width { get; set; }
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				HotSpot spot;
+
+				spot = new HotSpot();
+				spot.Name = Owner.Name;
+				spot.Group = Owner.Group;
+				spot.MinX = x;
+				spot.MaxX = x + Width - 1;
+				spot.MinY = y;
+				spot.MaxY = y + Height - 1;
+				DrawList.HotSpots.Add(spot);
+			}
+
 		}
 
 		class XmlRef : XmlGraphic
@@ -313,6 +327,7 @@ namespace ScreenDesigner
 				Type typGraphic;
 
 				Parent = parent;
+				Group = parent?.Group;
 				Children = new List<Element>();
 				if (ElementTypes.TryGetValue(type, out typGraphic))
 				{
@@ -331,6 +346,8 @@ namespace ScreenDesigner
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
+			public string Group { get; set; }
+			public string Location { get; set; }
 			public string Value
 			{
 				set 
@@ -362,6 +379,8 @@ namespace ScreenDesigner
 				el.Name = Name;
 				el.Top = Top;
 				el.Left = Left;
+				el.Group = Group;
+				el.Location = Location;
 				el.Graphic = Graphic;
 				if (Graphic != null)
 				{
@@ -400,6 +419,14 @@ namespace ScreenDesigner
 					case "Left":
 						Left = int.Parse(Value);
 						break;
+
+					case "Group":
+						Group = Value;
+						break;
+
+					case "Location":
+						Location = Value;
+						break;
 				}
 			}
 
@@ -423,6 +450,8 @@ namespace ScreenDesigner
 			{
 				x += Left;
 				y += Top;
+				if (Location != null)
+					DrawList.Locations.Add(new Location(Location, x, y));
 				if (Graphic != null)
 					Graphic.Draw(DrawList, x, y);
 				foreach (Element el in Children)
@@ -430,30 +459,17 @@ namespace ScreenDesigner
 			}
 		}
 
-		internal class NamedBitmap
-		{
-			public NamedBitmap(string name, int width, int height)
-			{
-				Name = name;
-				Height = height;
-				Width = width;
-				Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
-			}
-			public string Name { get; set; }
-			public int Height { get; set; }
-			public int Width { get; set; }
-			public RenderTargetBitmap Bitmap { get; set; }
-		}
-
 		class DrawResults
 		{
 			public DrawResults()
 			{
 				Visual = new ContainerVisual();
+				Locations = new List<Location>();
+				HotSpots = new List<HotSpot>();
 			}
 			public ContainerVisual Visual { get; protected set; }
-			// UNDONE: collection for hotspots
-			// UNDONE: collection for reference points
+			public List<Location> Locations { get; protected set; }
+			public List<HotSpot> HotSpots { get; protected set; }
 		}
 
 		#endregion
@@ -524,6 +540,8 @@ namespace ScreenDesigner
 			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
 			bmp = new NamedBitmap(el.Name, el.Width, el.Height);
+			bmp.Locations = DrawList.Locations;
+			bmp.HotSpots = DrawList.HotSpots;
 			bmp.Bitmap.Render(DrawList.Visual);
 			Images.Add(bmp);
 		}
@@ -550,4 +568,49 @@ namespace ScreenDesigner
 
 		#endregion
 	}
+
+
+	#region Result Types
+
+	class Location
+	{
+		public Location(string name, int x, int y)
+		{
+			Name = name;
+			X = x;
+			Y = y;
+		}
+		public string Name { get; protected set; }
+		public int X { get; protected set; }
+		public int Y { get; protected set; }
+	}
+
+	class HotSpot
+	{
+		public string Name { get; set; }
+		public string Group { get; set; }
+		public int MinX { get; set; }
+		public int MaxX { get; set; }
+		public int MinY { get; set; }
+		public int MaxY { get; set; }
+	}
+
+	class NamedBitmap
+	{
+		public NamedBitmap(string name, int width, int height)
+		{
+			Name = name;
+			Height = height;
+			Width = width;
+			Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+		}
+		public string Name { get; protected set; }
+		public int Height { get; protected set; }
+		public int Width { get; protected set; }
+		public RenderTargetBitmap Bitmap { get; protected set; }
+		public List<Location> Locations { get; set; }
+		public List<HotSpot> HotSpots { get; set; }
+	}
+
+	#endregion
 }

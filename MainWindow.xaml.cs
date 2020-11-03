@@ -23,6 +23,13 @@ namespace ScreenDesigner
 		const int GroupExtraHeight = 30;
 		const int GroupExtraWidth = 20;
 
+		// Output file
+		const string StrStartOutput = "// Locations and Hotspots";
+		const string StrStartLocations = "// Locations";
+		const string StrDefineLocation = "DEFINE_LOCATION(\"{0}\", {1}, {2})";
+		const string StrStartHotspots = "// Hotspots";
+		const string StrDefineHotspot = "DEFINE_HOTSPOT(\"{0}\", \"{1}\", {2}, {3}, {4}, {5})";
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -50,7 +57,7 @@ namespace ScreenDesigner
 
 		FileSystemWatcher m_watcher;
 		Dispatcher m_dispatcher;
-		List<XmlImage.NamedBitmap> m_Images;
+		List<NamedBitmap> m_Images;
 
 		#endregion
 
@@ -84,7 +91,7 @@ namespace ScreenDesigner
 				parser = new XmlImage();
 				m_Images = parser.ParseXml(doc);
 				StartImageDisplay();
-				foreach (XmlImage.NamedBitmap bmp in m_Images)
+				foreach (NamedBitmap bmp in m_Images)
 					DisplayImage(bmp);
 				EndImageDisplay();
 			}
@@ -127,7 +134,7 @@ namespace ScreenDesigner
 			SizeToContent = SizeToContent.WidthAndHeight;
 		}
 
-		void DisplayImage(XmlImage.NamedBitmap bmp)
+		void DisplayImage(NamedBitmap bmp)
 		{
 			GroupBox group;
 			Border border;
@@ -231,13 +238,38 @@ namespace ScreenDesigner
 
 			path = Path.GetDirectoryName(Settings.Default.XmlFileName);
 
-			foreach (XmlImage.NamedBitmap bmp in m_Images)
+			// Ouput each image as .bmp and associated .h file with hotspots and locations
+			foreach (NamedBitmap bmp in m_Images)
 			{
+				// Output bitmap image
 				BmpBitmapEncoder encode = new BmpBitmapEncoder();
 				encode.Frames.Add(BitmapFrame.Create(bmp.Bitmap));
-				filename = Path.Combine(path, bmp.Name) + ".bmp";
-				using (Stream stream = File.Open(filename, FileMode.Create))
+				filename = Path.Combine(path, bmp.Name);
+				using (Stream stream = File.Open(filename + ".bmp", FileMode.Create))
 					encode.Save(stream);
+
+				if (bmp.Locations.Count != 0 || bmp.HotSpots.Count != 0)
+				{
+					// Output .h file
+					using (StreamWriter writer = new StreamWriter(filename + ".h"))
+					{
+						writer.WriteLine(StrStartOutput);
+
+						if (bmp.Locations.Count != 0)
+						{
+							writer.WriteLine(StrStartLocations);
+							foreach (Location loc in bmp.Locations)
+								writer.WriteLine(string.Format(StrDefineLocation, loc.Name, loc.X, loc.Y));
+						}
+
+						if (bmp.HotSpots.Count != 0)
+						{
+							writer.WriteLine(StrStartHotspots);
+							foreach (HotSpot spot in bmp.HotSpots)
+								writer.WriteLine(string.Format(StrDefineHotspot, spot.Name, spot.Group, spot.MinX, spot.MaxX, spot.MinY, spot.MaxY));
+						}
+					}
+				}
 			}
 		}
 
