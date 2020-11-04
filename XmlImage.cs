@@ -88,7 +88,10 @@ namespace ScreenDesigner
 					val = (int)new Int32Converter().ConvertFromString(color);
 					return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
 				}
-				catch { }
+				catch (Exception exc)
+				{
+					Debug.WriteLine("Expected exception: " + exc.Message);
+				}
 
 				// Try looking it up by name
 				prop = typeof(Colors).GetProperty(color);

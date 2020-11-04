@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+  <!-- definition of attributes -->
+  <xs:attribute name="Name" type="xs:string"/>
+  <xs:attribute name="RefName" type="xs:string"/>
+  <xs:attribute name="FontFamily" type="xs:string"/>
+  <xs:attribute name="Fill" type="xs:string"/>
+  <xs:attribute name="Location" type="xs:string"/>
+  <xs:attribute name="Height" type="xs:integer"/>
+  <xs:attribute name="Width" type="xs:integer"/>
+  <xs:attribute name="RowHeight" type="xs:integer"/>
+  <xs:attribute name="ColumnWidth" type="xs:integer"/>
+	<xs:attribute name="RadiusX" type="xs:integer"/>
+	<xs:attribute name="RadiusY" type="xs:integer"/>
+	<xs:attribute name="StrokeThickness" type="xs:integer"/>
+	<xs:attribute name="Stroke" type="xs:string"/>
+	<xs:attribute name="FontSize" type="xs:integer"/>
+	<xs:attribute name="Top" type="xs:integer"/>
+	<xs:attribute name="Left" type="xs:integer"/>
+	<xs:attribute name="Group" type="xs:string"/>
+
+	<xs:attributeGroup name="Element">
+		<xs:attribute ref="Name"/>
+		<xs:attribute ref="Top" />
+		<xs:attribute ref="Left" />
+		<xs:attribute ref="Location" />
+		<xs:attribute ref="Group" />
+	</xs:attributeGroup>
+
+	<!-- definition of complex elements -->
+	<xs:complexType name="TopContent">
+		<xs:choice maxOccurs="unbounded">
+			<xs:element name="Grid" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element name="Rectangle" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element name="TextBlock" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element name="Set" minOccurs="0" maxOccurs="unbounded" />
+		</xs:choice>
+	</xs:complexType>
+
+  <xs:element name="Project">
+    <xs:complexType>
+			<xs:choice minOccurs="1" maxOccurs="unbounded">
+				<xs:element name="Component" maxOccurs="unbounded" />
+				<xs:element name="Image" maxOccurs="unbounded" />
+			</xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+	<xs:complexType name="Component_t">
+		<xs:complexContent>
+			<xs:extension base="TopContent">
+				<xs:attribute ref="Name" use="required"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+  <xs:element name="Component" type="Component_t" />
+
+	<xs:complexType name="Image_t">
+		<xs:complexContent>
+			<xs:extension base="TopContent">
+				<xs:attribute ref="Name" use="required"/>
+				<xs:attribute ref="Height" use="required"/>
+				<xs:attribute ref="Width" use="required"/>
+				<xs:attribute ref="Fill" use="required"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+  <xs:element name="Image" type="Image_t" />
+
+	<xs:complexType name="Content">
+		<xs:complexContent>
+			<xs:extension base="TopContent">
+				<xs:attributeGroup ref="Element" />
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:complexType name="Rectangle_t">
+		<xs:complexContent>
+			<xs:extension base="Content">
+				<xs:attribute ref="Height" use="required" />
+				<xs:attribute ref="Width" use="required" />
+				<xs:attribute ref="RadiusX" />
+				<xs:attribute ref="RadiusY" />
+				<xs:attribute ref="StrokeThickness" />
+				<xs:attribute ref="Stroke" />
+				<xs:attribute ref="Fill" />
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:element name="Rectangle" type="Rectangle_t" />
+
+	<xs:element name="TextBlock">
+		<xs:complexType>
+			<xs:attributeGroup ref="Element" />
+			<xs:attribute ref="FontFamily" />
+			<xs:attribute ref="FontSize" />
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="Set">
+		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="xs:string">
+					<xs:attribute ref="RefName" />
+				</xs:extension>
+			</xs:simpleContent>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Grid">
+    <xs:complexType>
+			<xs:sequence>
+				<xs:element name="Default" minOccurs="0" />
+				<xs:element name="Row" minOccurs="1" maxOccurs="unbounded" />
+			</xs:sequence>
+			<xs:attributeGroup ref="Element" />
+			<xs:attribute ref="RowHeight" use="required" />
+			<xs:attribute ref="ColumnWidth" use="required" />
+		</xs:complexType>
+	</xs:element>
+
+	<xs:element name="Row">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:element name="Column" minOccurs="1" maxOccurs="unbounded" />
+			</xs:sequence>
+			<xs:attributeGroup ref="Element" />
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="Column" type="Content" />
+	
+	<xs:element name="Default" type="Content" />
+	
+	<xs:element name="HotSpot">
+		<xs:complexType>
+			<xs:attributeGroup ref="Element" />
+			<xs:attribute ref="Height" use="required" />
+			<xs:attribute ref="Width" use="required" />
+		</xs:complexType>
+	</xs:element>
+	
+</xs:schema>

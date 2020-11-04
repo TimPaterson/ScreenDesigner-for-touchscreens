@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Xml;
+using System.Xml.Schema;
 
 namespace ScreenDesigner
 {
@@ -19,6 +20,7 @@ namespace ScreenDesigner
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		const string StrXmlSchemaPath = @"..\..\ScreenDesigner.xsd";
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
 		const int GroupExtraHeight = 30;
 		const int GroupExtraWidth = 20;
@@ -68,16 +70,28 @@ namespace ScreenDesigner
 		{
 			XmlDocument doc;
 			XmlImage parser;
+			XmlReaderSettings settings;
 
 			doc = new XmlDocument();
 			try
 			{
-				doc.Load(strXmlFileName);
+				settings = new XmlReaderSettings();
+				settings.Schemas.Add(null, StrXmlSchemaPath);
+				settings.ValidationType = ValidationType.Schema;
+				settings.IgnoreWhitespace = true;
+				settings.IgnoreComments = true;
+				using (XmlReader reader = XmlReader.Create(strXmlFileName, settings))
+					doc.Load(reader);
 			}
 			catch (XmlException exc)
 			{
 				// UNDONE: XML parsing error
 				Debug.WriteLine(exc.Message);
+				return true;	// file exists, remember it
+			}
+			catch (XmlSchemaValidationException exc)
+			{
+				Debug.WriteLine(exc.Message + "on line " + exc.LineNumber);
 				return true;	// file exists, remember it
 			}
 			catch (Exception exc)
@@ -99,7 +113,8 @@ namespace ScreenDesigner
 			{
 				// UNDONE: parsing error
 				Debug.WriteLine(exc.Message);
-				Debug.WriteLine(exc.InnerException.Message);
+				if (exc.InnerException != null)
+					Debug.WriteLine(exc.InnerException.Message);
 			}
 			return true;
 		}
