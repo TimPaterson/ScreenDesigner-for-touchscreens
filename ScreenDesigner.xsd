@@ -34,18 +34,20 @@
 	<!-- definition of complex elements -->
 	<xs:complexType name="TopContent_t">
 		<xs:choice maxOccurs="unbounded">
-			<xs:element name="Grid" minOccurs="0" maxOccurs="unbounded" />
-			<xs:element name="Rectangle" minOccurs="0" maxOccurs="unbounded" />
-			<xs:element name="TextBlock" minOccurs="0" maxOccurs="unbounded" />
-			<xs:element name="Set" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="Grid" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="Rectangle" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="TextBlock" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
+			<xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
 		</xs:choice>
 	</xs:complexType>
 
   <xs:element name="Project">
     <xs:complexType>
 			<xs:choice minOccurs="1" maxOccurs="unbounded">
-				<xs:element name="Component" maxOccurs="unbounded" />
-				<xs:element name="Image" maxOccurs="unbounded" />
+				<xs:element ref="Component" maxOccurs="unbounded" />
+				<xs:element ref="Image" maxOccurs="unbounded" />
 			</xs:choice>
     </xs:complexType>
   </xs:element>
@@ -116,14 +118,19 @@
 	
 	<xs:element name="Set">
 		<xs:complexType>
+			<xs:simpleContent>
+				<xs:extension base="xs:string">
+					<xs:attribute ref="RefName" />
+				</xs:extension>
+			</xs:simpleContent>
 		</xs:complexType>
 	</xs:element>
 
 	<xs:element name="Grid">
     <xs:complexType>
 			<xs:sequence>
-				<xs:element name="Default" minOccurs="0" />
-				<xs:element name="Row" minOccurs="1" maxOccurs="unbounded" />
+				<xs:element ref="Default" minOccurs="0" />
+				<xs:element ref="Row" minOccurs="1" maxOccurs="unbounded" />
 			</xs:sequence>
 			<xs:attributeGroup ref="Element" />
 			<xs:attribute ref="RowHeight" use="required" />
@@ -134,7 +141,7 @@
 	<xs:element name="Row">
 		<xs:complexType>
 			<xs:sequence>
-				<xs:element name="Column" minOccurs="1" maxOccurs="unbounded" />
+				<xs:element ref="Column" minOccurs="1" maxOccurs="unbounded" />
 			</xs:sequence>
 			<xs:attributeGroup ref="Element" />
 		</xs:complexType>
@@ -149,6 +156,13 @@
 			<xs:attributeGroup ref="Element" />
 			<xs:attribute ref="Height" use="required" />
 			<xs:attribute ref="Width" use="required" />
+		</xs:complexType>
+	</xs:element>
+	
+	<xs:element name="Ref">
+		<xs:complexType>
+			<xs:attributeGroup ref="Element" />
+			<xs:attribute ref="RefName" />
 		</xs:complexType>
 	</xs:element>
 	
