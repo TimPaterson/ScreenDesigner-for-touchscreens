@@ -144,14 +144,22 @@ namespace ScreenDesigner
 				set
 				{
 					base.Owner = value;
-					Width = Owner.Parent.Graphic.Width;
-					Height = Owner.Parent.Graphic.Height;
+					if (Owner.Parent.Graphic != null)
+					{
+						Width = Owner.Parent.Graphic.Width;
+						Height = Owner.Parent.Graphic.Height;
+					}
 				}
 			}
 
 			public string FontFamily
 			{
 				set { ((TextBlock)Graphic).FontFamily = new FontFamily(value); }
+			}
+
+			public override string Value
+			{
+				set { ((TextBlock)Graphic).Text = value; }
 			}
 		}
 
@@ -188,8 +196,12 @@ namespace ScreenDesigner
 
 		class XmlSet : XmlGraphic
 		{
-			static Regex s_regAssign = new Regex(@"([a-zA-Z0-9_$]+).([a-zA-Z0-9_$]+)\s*=\s*(.+)$");
-			static Regex s_regAssignRef = new Regex(@"([a-zA-Z0-9_$]+)\s*=\s*(.+)$");
+			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=\\s*((\"(?<val>([^\"\\\\]|\\\\\")*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
+			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)." + RegAssignRef;
+
+			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
+			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
+			static Regex s_regUnescape = new Regex(@"\\(.)");
 
 			public string RefName { get; set; }
 
@@ -199,40 +211,29 @@ namespace ScreenDesigner
 				{
 					Match match;
 					Element el;
-					string attr;
-					string val;
 					string refName;
-					string[] arExpr;
-					string exprTrim;
+					string val;
 
-					arExpr = value.Split(';');
-					foreach (string expr in arExpr)
+					refName = RefName;
+					if (RefName == null)
+						match = s_regAssign.Match(value);
+					else
+						match = s_regAssignRef.Match(value);
+
+					if (!match.Success)
+						throw new Exception("Invalid Set: " + value);
+
+					for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
 					{
-						exprTrim = expr.Trim();
-						if (exprTrim.Length == 0)
-							continue;
-
 						if (RefName == null)
-						{
-							match = s_regAssign.Match(exprTrim);
-							if (!match.Success)
-								throw new Exception("Invalid Set"); // UNDONE: improve error reporting
-							refName = match.Groups[1].Value;
-							attr = match.Groups[2].Value;
-							val = match.Groups[3].Value;
-						}
-						else
-						{
-							match = s_regAssignRef.Match(exprTrim);
-							if (!match.Success)
-								throw new Exception("Invalid Set"); // UNDONE: improve error reporting
-							refName = RefName;
-							attr = match.Groups[1].Value;
-							val = match.Groups[2].Value;
-						}
+							refName = match.Groups["ref"].Captures[i].Value;
 						el = Owner.Parent.FindChild(refName);
 						if (el != null)
-							el.SetAttribute(attr, val);
+						{
+							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
+							el.SetAttribute(match.Groups["attr"].Captures[i].Value, val);
+						}
+
 					}
 				}
 			}

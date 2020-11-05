@@ -19,6 +19,9 @@
 	<xs:attribute name="Top" type="xs:integer"/>
 	<xs:attribute name="Left" type="xs:integer"/>
 	<xs:attribute name="Group" type="xs:string"/>
+	<xs:attribute name="Text" type="xs:string"/>
+	<xs:attribute name="Background" type="xs:string"/>
+	<xs:attribute name="Foreground" type="xs:string"/>
 
 	<xs:attributeGroup name="Element">
 		<xs:attribute ref="Name"/>
@@ -29,7 +32,7 @@
 	</xs:attributeGroup>
 
 	<!-- definition of complex elements -->
-	<xs:complexType name="TopContent">
+	<xs:complexType name="TopContent_t">
 		<xs:choice maxOccurs="unbounded">
 			<xs:element name="Grid" minOccurs="0" maxOccurs="unbounded" />
 			<xs:element name="Rectangle" minOccurs="0" maxOccurs="unbounded" />
@@ -49,7 +52,7 @@
 
 	<xs:complexType name="Component_t">
 		<xs:complexContent>
-			<xs:extension base="TopContent">
+			<xs:extension base="TopContent_t">
 				<xs:attribute ref="Name" use="required"/>
 			</xs:extension>
 		</xs:complexContent>
@@ -59,7 +62,7 @@
 
 	<xs:complexType name="Image_t">
 		<xs:complexContent>
-			<xs:extension base="TopContent">
+			<xs:extension base="TopContent_t">
 				<xs:attribute ref="Name" use="required"/>
 				<xs:attribute ref="Height" use="required"/>
 				<xs:attribute ref="Width" use="required"/>
@@ -70,9 +73,9 @@
 
   <xs:element name="Image" type="Image_t" />
 
-	<xs:complexType name="Content">
+	<xs:complexType name="Content_t">
 		<xs:complexContent>
-			<xs:extension base="TopContent">
+			<xs:extension base="TopContent_t">
 				<xs:attributeGroup ref="Element" />
 			</xs:extension>
 		</xs:complexContent>
@@ -80,7 +83,7 @@
 
 	<xs:complexType name="Rectangle_t">
 		<xs:complexContent>
-			<xs:extension base="Content">
+			<xs:extension base="Content_t">
 				<xs:attribute ref="Height" use="required" />
 				<xs:attribute ref="Width" use="required" />
 				<xs:attribute ref="RadiusX" />
@@ -96,19 +99,23 @@
 
 	<xs:element name="TextBlock">
 		<xs:complexType>
-			<xs:attributeGroup ref="Element" />
-			<xs:attribute ref="FontFamily" />
-			<xs:attribute ref="FontSize" />
+			<xs:simpleContent>
+				<xs:extension base="xs:string">
+					<xs:attributeGroup ref="Element" />
+					<xs:attribute ref="Text" />
+					<xs:attribute ref="Height" />
+					<xs:attribute ref="Width" />
+					<xs:attribute ref="FontFamily" />
+					<xs:attribute ref="FontSize" />
+					<xs:attribute ref="Background" />
+					<xs:attribute ref="Foreground" />
+				</xs:extension>
+			</xs:simpleContent>
 		</xs:complexType>
 	</xs:element>
 	
 	<xs:element name="Set">
 		<xs:complexType>
-			<xs:simpleContent>
-				<xs:extension base="xs:string">
-					<xs:attribute ref="RefName" />
-				</xs:extension>
-			</xs:simpleContent>
 		</xs:complexType>
 	</xs:element>
 
@@ -133,9 +140,9 @@
 		</xs:complexType>
 	</xs:element>
 	
-	<xs:element name="Column" type="Content" />
+	<xs:element name="Column" type="Content_t" />
 	
-	<xs:element name="Default" type="Content" />
+	<xs:element name="Default" type="Content_t" />
 	
 	<xs:element name="HotSpot">
 		<xs:complexType>
