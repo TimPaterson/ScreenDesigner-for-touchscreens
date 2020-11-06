@@ -58,5 +58,17 @@ namespace ScreenDesigner.Properties {
                 this["XmlFileName"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string OutputFileFolder {
+            get {
+                return ((string)(this["OutputFileFolder"]));
+            }
+            set {
+                this["OutputFileFolder"] = value;
+            }
+        }
     }
 }

@@ -251,7 +251,10 @@ namespace ScreenDesigner
 			string path;
 			string filename;
 
-			path = Path.GetDirectoryName(Settings.Default.XmlFileName);
+			if (Settings.Default.OutputFileFolder != null)
+				path = Settings.Default.OutputFileFolder;
+			else
+				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
 
 			// Ouput each image as .bmp and associated .h file with hotspots and locations
 			foreach (NamedBitmap bmp in m_Images)
@@ -290,7 +293,20 @@ namespace ScreenDesigner
 
 		private void btnBrowse_Click(object sender, RoutedEventArgs e)
 		{
+			string path;
+			Ookii.Dialogs.Wpf.VistaFolderBrowserDialog dlg;
 
+			if (Settings.Default.OutputFileFolder != null)
+				path = Settings.Default.OutputFileFolder;
+			else
+				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
+
+			dlg = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
+			dlg.SelectedPath = path;
+			if (dlg.ShowDialog(this) == true)
+			{
+				Settings.Default.OutputFileFolder = dlg.SelectedPath;
+			}
 		}
 
 		#endregion

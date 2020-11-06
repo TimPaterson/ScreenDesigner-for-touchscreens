@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -78,6 +77,20 @@ namespace ScreenDesigner
 				}
 			}
 
+			public XmlGraphic Clone()
+			{
+				XmlGraphic graphic;
+
+				graphic = (XmlGraphic)MemberwiseClone();
+				if (Graphic != null)
+				{
+					if (m_xmlClone == null)
+						m_xmlClone = XamlWriter.Save(Graphic);
+					graphic.Graphic = (FrameworkElement)XamlReader.Load(new XmlTextReader(new StringReader(m_xmlClone)));
+				}
+				return graphic;
+			}
+
 			protected static Color ColorFromString(string color)
 			{
 				int val;
@@ -99,31 +112,53 @@ namespace ScreenDesigner
 					throw new Exception("Invalid color");
 				return (Color)prop.GetValue(null);
 			}
-
-			public XmlGraphic Clone()
-			{
-				XmlGraphic graphic;
-
-				graphic = (XmlGraphic)MemberwiseClone();
-				if (Graphic != null)
-				{
-					if (m_xmlClone == null)
-						m_xmlClone = XamlWriter.Save(Graphic);
-					graphic.Graphic = (FrameworkElement)XamlReader.Load(new XmlTextReader(new StringReader(m_xmlClone)));
-				}
-				return graphic;
-			}
 		}
 
 		class XmlRectangle : XmlGraphic
 		{
 			public XmlRectangle()
 			{
-				Rectangle rect;
+				Rectangle shape;
 
-				rect = new Rectangle();
-				rect.StrokeThickness = 0;
-				Graphic = rect;
+				shape = new Rectangle();
+				shape.StrokeThickness = 0;
+				Graphic = shape;
+			}
+		}
+
+		class XmlEllipse : XmlGraphic
+		{
+			public XmlEllipse()
+			{
+				Ellipse shape;
+
+				shape = new Ellipse();
+				shape.StrokeThickness = 0;
+				Graphic = shape;
+			}
+		}
+
+		class XmlLine : XmlGraphic
+		{
+			public XmlLine()
+			{
+				Line shape;
+
+				shape = new Line();
+				Graphic = shape;
+			}
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				Line line;
+
+				line = (Line)Graphic;
+				if (Double.IsNaN(line.Height))
+					line.Height = Math.Abs(line.Y2 - line.Y1) + line.StrokeThickness;
+				if (Double.IsNaN(line.Width))
+					line.Width = Math.Abs(line.X2 - line.X1) + line.StrokeThickness;
+
+				base.Draw(DrawList, x, y);
 			}
 		}
 
@@ -155,6 +190,48 @@ namespace ScreenDesigner
 			public string FontFamily
 			{
 				set { ((TextBlock)Graphic).FontFamily = new FontFamily(value); }
+			}
+
+			public string FontWeight
+			{
+				set 
+				{
+					PropertyInfo prop;
+
+					// Look it up by name
+					prop = typeof(FontWeights).GetProperty(value);
+					if (prop == null)
+						throw new Exception("Invalid FontWeight");
+					((TextBlock)Graphic).FontWeight = (FontWeight)prop.GetValue(null);
+				}
+			}
+
+			public string FontStyle
+			{
+				set 
+				{
+					PropertyInfo prop;
+
+					// Look it up by name
+					prop = typeof(FontStyles).GetProperty(value);
+					if (prop == null)
+						throw new Exception("Invalid FontStyle");
+					((TextBlock)Graphic).FontStyle = (FontStyle)prop.GetValue(null);
+				}
+			}
+
+			public string FontStretch
+			{
+				set 
+				{
+					PropertyInfo prop;
+
+					// Look it up by name
+					prop = typeof(FontStretches).GetProperty(value);
+					if (prop == null)
+						throw new Exception("Invalid FontStretch");
+					((TextBlock)Graphic).FontStretch = (FontStretch)prop.GetValue(null);
+				}
 			}
 
 			public override string Value
@@ -365,7 +442,9 @@ namespace ScreenDesigner
 
 			static readonly Dictionary<string, Type> ElementTypes = new Dictionary<string, Type>
 			{
-				{ "Rectangle",	typeof(XmlRectangle) },
+				{ "Rectangle",  typeof(XmlRectangle) },
+				{ "Ellipse",	typeof(XmlEllipse) },
+				{ "Line",		typeof(XmlLine) },
 				{ "TextBlock",	typeof(XmlTextBlock) },
 				{ "HotSpot",	typeof(XmlHotSpot) },
 				{ "Image",		typeof(XmlRectangle) },
