@@ -32,6 +32,7 @@
       <xs:element ref="Ellipse" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Line" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="TextBlock" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element ref="Image" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
@@ -42,7 +43,7 @@
     <xs:complexType>
       <xs:choice minOccurs="1" maxOccurs="unbounded">
         <xs:element ref="Component" maxOccurs="unbounded" />
-        <xs:element ref="Image" maxOccurs="unbounded" />
+        <xs:element ref="Canvas" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -57,7 +58,7 @@
 
   <xs:element name="Component" type="Component_t" />
 
-  <xs:complexType name="Image_t">
+  <xs:complexType name="Canvas_t">
     <xs:complexContent>
       <xs:extension base="TopContent_t">
         <xs:attribute ref="Name" use="required"/>
@@ -68,7 +69,7 @@
     </xs:complexContent>
   </xs:complexType>
 
-  <xs:element name="Image" type="Image_t" />
+  <xs:element name="Canvas" type="Canvas_t" />
 
   <xs:complexType name="Content_t">
     <xs:complexContent>
@@ -143,6 +144,15 @@
     </xs:complexType>
   </xs:element>
   
+  <xs:element name="Image">
+    <xs:complexType>
+      <xs:attributeGroup ref="Element" />
+      <xs:attribute name="Source" type="xs:string" use="required" />
+      <xs:attribute ref="Height" />
+      <xs:attribute ref="Width" />
+    </xs:complexType>
+  </xs:element>
+
   <xs:element name="Set">
     <xs:complexType>
       <xs:simpleContent>

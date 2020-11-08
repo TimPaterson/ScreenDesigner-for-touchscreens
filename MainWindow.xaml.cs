@@ -27,10 +27,38 @@ namespace ScreenDesigner
 
 		// Output file
 		const string StrStartOutput = "// Locations and Hotspots";
+		const string StrMacroUndef = "#undef {0}";
+		// Locations
+		const string StrLocationMacroPredfine = 
+@"#ifndef {0}
+#define {0}(a,b,c)
+#endif";
 		const string StrStartLocations = "// Locations";
-		const string StrDefineLocation = "DEFINE_LOCATION(\"{0}\", {1}, {2})";
+		const string StrLocationMacro = "DEFINE_LOCATION";
+		const string StrDefineLocation = StrLocationMacro + "({0}, {1}, {2})";
+		// Hotspots
+		const string StrHotspotMacroPredfine = 
+@"#ifndef {0}
+#define {0}(a,b,c,d,e,f)
+#endif";
 		const string StrStartHotspots = "// Hotspots";
-		const string StrDefineHotspot = "DEFINE_HOTSPOT(\"{0}\", \"{1}\", {2}, {3}, {4}, {5})";
+		const string StrHotspotMacro = "DEFINE_HOTSPOT";
+		const string StrDefineHotspot = StrHotspotMacro + "({0}, {1}, {2}, {3}, {4}, {5})";
+		// Hotspot groups
+		const string StrGroupStartEndPredfine = 
+@"#ifndef {0}
+#define {0}(a)
+#endif";
+		const string StrStartGroupMacro = "START_GROUP";
+		const string StrDefineGroupStart = StrStartGroupMacro + "({0})";
+		const string StrEndGroupMacro = "END_GROUP";
+		const string StrDefineGroupEnd = StrEndGroupMacro + "({0})";
+		const string StrGroupMacroPredfine = 
+@"#ifndef {0}_{1}
+#define {0}_{1}(a,b,c,d,e,f)
+#endif";
+		const string StrDefineHotspotGroup = StrHotspotMacro + "_{1}({0}, {1}, {2}, {3}, {4}, {5})";
+		const string StrGroupUndef = "#undef {0}_{1}";
 
 		public MainWindow()
 		{
@@ -69,7 +97,7 @@ namespace ScreenDesigner
 		bool LoadXml(string strXmlFileName)
 		{
 			XmlDocument doc;
-			XmlImage parser;
+			XmlCanvas parser;
 			XmlReaderSettings settings;
 
 			doc = new XmlDocument();
@@ -102,7 +130,7 @@ namespace ScreenDesigner
 
 			try
 			{
-				parser = new XmlImage();
+				parser = new XmlCanvas();
 				m_Images = parser.ParseXml(doc);
 				StartImageDisplay();
 				foreach (NamedBitmap bmp in m_Images)
@@ -250,6 +278,8 @@ namespace ScreenDesigner
 		{
 			string path;
 			string filename;
+			HashSet<string> groups;
+			bool fNoGroup;
 
 			if (Settings.Default.OutputFileFolder != null)
 				path = Settings.Default.OutputFileFolder;
@@ -271,20 +301,75 @@ namespace ScreenDesigner
 					// Output .h file
 					using (StreamWriter writer = new StreamWriter(filename + ".h"))
 					{
+						groups = new HashSet<string>();
+						fNoGroup = false;
 						writer.WriteLine(StrStartOutput);
 
 						if (bmp.Locations.Count != 0)
 						{
 							writer.WriteLine(StrStartLocations);
+							writer.WriteLine(string.Format(StrLocationMacroPredfine, StrLocationMacro));
+							writer.WriteLine();
 							foreach (Location loc in bmp.Locations)
 								writer.WriteLine(string.Format(StrDefineLocation, loc.Name, loc.X, loc.Y));
+							writer.WriteLine();
 						}
 
 						if (bmp.HotSpots.Count != 0)
 						{
+							// Firset output all hotspots, regardess of group
 							writer.WriteLine(StrStartHotspots);
+							writer.WriteLine(string.Format(StrHotspotMacroPredfine, StrHotspotMacro));
+							writer.WriteLine();
 							foreach (HotSpot spot in bmp.HotSpots)
-								writer.WriteLine(string.Format(StrDefineHotspot, spot.Name, spot.Group, spot.MinX, spot.MaxX, spot.MinY, spot.MaxY));
+							{
+								writer.WriteLine(string.Format(StrDefineHotspot, spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY));
+								if (string.IsNullOrEmpty(spot.Group))
+								{
+									fNoGroup = true;
+									spot.Group = "";	// make sure not null
+								}
+								else
+									groups.Add(spot.Group);
+							}
+							writer.WriteLine();
+
+							// Now output them by group
+							if (groups.Count != 0)
+							{
+								if (fNoGroup)
+									groups.Add("");
+								writer.WriteLine(string.Format(StrGroupStartEndPredfine, StrStartGroupMacro));
+								writer.WriteLine(string.Format(StrGroupStartEndPredfine, StrEndGroupMacro));
+							}
+							foreach (string group in groups)
+							{
+								writer.WriteLine(string.Format(StrGroupMacroPredfine, StrHotspotMacro, group));
+								writer.WriteLine();
+								writer.WriteLine(string.Format(StrDefineGroupStart, group));
+								foreach (HotSpot spot in bmp.HotSpots)
+								{
+									if (spot.Group == group)
+										writer.WriteLine(string.Format(StrDefineHotspotGroup, spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY));
+								}
+								writer.WriteLine(string.Format(StrDefineGroupEnd, group));
+								writer.WriteLine();
+							}
+						}
+
+						if (bmp.Locations.Count != 0)
+							writer.WriteLine(string.Format(StrMacroUndef, StrLocationMacro));
+
+						if (bmp.HotSpots.Count != 0)
+						{
+							writer.WriteLine(string.Format(StrMacroUndef, StrHotspotMacro));
+							foreach (string group in groups)
+								writer.WriteLine(string.Format(StrGroupUndef, StrHotspotMacro, group));
+							if (groups.Count != 0)
+							{
+								writer.WriteLine(string.Format(StrMacroUndef, StrStartGroupMacro));
+								writer.WriteLine(string.Format(StrMacroUndef, StrEndGroupMacro));
+							}
 						}
 					}
 				}

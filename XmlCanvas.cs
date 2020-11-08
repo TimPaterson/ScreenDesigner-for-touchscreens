@@ -15,7 +15,7 @@ using System.Xml;
 
 namespace ScreenDesigner
 {
-	class XmlImage
+	class XmlCanvas
 	{
 		#region Types
 
@@ -240,6 +240,37 @@ namespace ScreenDesigner
 			}
 		}
 
+		class XmlImage : XmlGraphic
+		{
+			public XmlImage()
+			{
+				Image image;
+
+				image = new Image();
+				Graphic = image;
+			}
+
+			public string Source
+			{
+				set
+				{
+					BitmapImage bmp;
+					Image image;
+
+					bmp = new BitmapImage();
+					bmp.BeginInit();
+					bmp.UriSource = new Uri(value, UriKind.RelativeOrAbsolute);
+					bmp.EndInit();
+					image = ((Image)Graphic);
+					image.Source = bmp;
+					if (Double.IsNaN(image.Height))
+						image.Height = bmp.PixelHeight;
+					if (Double.IsNaN(image.Width))
+						image.Width = bmp.PixelWidth;
+				}
+			}
+		}
+
 		class XmlHotSpot : XmlGraphic
 		{
 			public override int Height { get; set; }
@@ -266,7 +297,7 @@ namespace ScreenDesigner
 			{
 				set
 				{
-					XmlImage.Components[value].CloneTo(Owner);
+					XmlCanvas.Components[value].CloneTo(Owner);
 				}
 			}
 		}
@@ -445,9 +476,10 @@ namespace ScreenDesigner
 				{ "Rectangle",  typeof(XmlRectangle) },
 				{ "Ellipse",	typeof(XmlEllipse) },
 				{ "Line",		typeof(XmlLine) },
-				{ "TextBlock",	typeof(XmlTextBlock) },
+				{ "TextBlock",  typeof(XmlTextBlock) },
+				{ "Image",		typeof(XmlImage) },
 				{ "HotSpot",	typeof(XmlHotSpot) },
-				{ "Image",		typeof(XmlRectangle) },
+				{ "Canvas",		typeof(XmlRectangle) },
 				{ "Ref",		typeof(XmlRef) },
 				{ "Set",		typeof(XmlSet) },
 				{ "#text",		typeof(XmlData) },
@@ -560,7 +592,7 @@ namespace ScreenDesigner
 
 		#region Constructor
 
-		public XmlImage()
+		public XmlCanvas()
 		{
 			Components = new Dictionary<string, Element>();
 			Images = new List<NamedBitmap>();
@@ -592,8 +624,8 @@ namespace ScreenDesigner
 						DefineComponent(el);
 						break;
 
-					case "Image":
-						DefineImage(el);
+					case "Canvas":
+						DefineCanvas(el);
 						break;
 				}
 			}
@@ -613,7 +645,7 @@ namespace ScreenDesigner
 			Components.Add(el.Name, el);
 		}
 
-		void DefineImage(XmlNode node)
+		void DefineCanvas(XmlNode node)
 		{
 			Element el;
 			DrawResults DrawList;
