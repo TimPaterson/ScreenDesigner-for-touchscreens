@@ -6,15 +6,16 @@
   <xs:attribute name="RefName" type="xs:string"/>
   <xs:attribute name="Fill" type="xs:string"/>
   <xs:attribute name="Location" type="xs:string"/>
-  <xs:attribute name="Height" type="xs:integer"/>
-  <xs:attribute name="Width" type="xs:integer"/>
-  <xs:attribute name="RowHeight" type="xs:integer"/>
-  <xs:attribute name="ColumnWidth" type="xs:integer"/>
-  <xs:attribute name="StrokeThickness" type="xs:integer"/>
+  <xs:attribute name="Height" type="xs:string"/>
+  <xs:attribute name="Width" type="xs:string"/>
+  <xs:attribute name="RowHeight" type="xs:string"/>
+  <xs:attribute name="ColumnWidth" type="xs:string"/>
+  <xs:attribute name="StrokeThickness" type="xs:string"/>
   <xs:attribute name="Stroke" type="xs:string"/>
-  <xs:attribute name="Top" type="xs:integer"/>
-  <xs:attribute name="Left" type="xs:integer"/>
+  <xs:attribute name="Top" type="xs:string"/>
+  <xs:attribute name="Left" type="xs:string"/>
   <xs:attribute name="Group" type="xs:string"/>
+  <xs:attribute name="Value" type="xs:string"/>
 
   <xs:attributeGroup name="Element">
     <xs:attribute ref="Name"/>
@@ -22,6 +23,7 @@
     <xs:attribute ref="Left" />
     <xs:attribute ref="Location" />
     <xs:attribute ref="Group" />
+    <xs:attribute ref="Value" />
   </xs:attributeGroup>
 
   <!-- definition of complex elements -->
@@ -65,6 +67,7 @@
         <xs:attribute ref="Height" use="required"/>
         <xs:attribute ref="Width" use="required"/>
         <xs:attribute ref="Fill" use="required"/>
+        <xs:attribute name="Folder" type="xs:string" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -84,8 +87,8 @@
       <xs:extension base="Content_t">
         <xs:attribute ref="Height" use="required" />
         <xs:attribute ref="Width" use="required" />
-        <xs:attribute name="RadiusX" type="xs:integer" />
-        <xs:attribute name="RadiusY" type="xs:integer" />
+        <xs:attribute name="RadiusX" type="xs:string" />
+        <xs:attribute name="RadiusY" type="xs:string" />
         <xs:attribute ref="StrokeThickness" />
         <xs:attribute ref="Stroke" />
         <xs:attribute ref="Fill" />
@@ -112,10 +115,10 @@
   <xs:complexType name="Line_t">
     <xs:complexContent>
       <xs:extension base="Content_t">
-        <xs:attribute name="X1" type="xs:integer" use="required" />
-        <xs:attribute name="Y1" type="xs:integer" use="required" />
-        <xs:attribute name="X2" type="xs:integer" use="required" />
-        <xs:attribute name="Y2" type="xs:integer" use="required" />
+        <xs:attribute name="X1" type="xs:string" use="required" />
+        <xs:attribute name="Y1" type="xs:string" use="required" />
+        <xs:attribute name="X2" type="xs:string" use="required" />
+        <xs:attribute name="Y2" type="xs:string" use="required" />
         <xs:attribute ref="Height" />
         <xs:attribute ref="Width" />
         <xs:attribute ref="StrokeThickness" />
@@ -136,7 +139,7 @@
           <xs:attribute name="FontWeight" type="xs:string" />
           <xs:attribute name="FontStyle" type="xs:string" />
           <xs:attribute name="FontStretch" type="xs:string" />
-          <xs:attribute name="FontSize" type="xs:integer" />
+          <xs:attribute name="FontSize" type="xs:string" />
           <xs:attribute name="Background" type="xs:string" />
           <xs:attribute name="Foreground" type="xs:string" />
         </xs:extension>
@@ -157,6 +160,8 @@
     <xs:complexType>
       <xs:simpleContent>
         <xs:extension base="xs:string">
+          <xs:attribute ref="Name"/>
+          <xs:attribute ref="Value" />
           <xs:attribute ref="RefName" />
         </xs:extension>
       </xs:simpleContent>

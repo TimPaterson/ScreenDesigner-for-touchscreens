@@ -12,10 +12,11 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Xml;
+using Flee.PublicTypes;
 
 namespace ScreenDesigner
 {
-	class XmlCanvas
+	class XmlScreen
 	{
 		#region Types
 
@@ -35,7 +36,7 @@ namespace ScreenDesigner
 				set { Graphic.Width = value; }
 			}
 
-			public virtual string Value
+			public virtual string Content
 			{
 				set { }
 			}
@@ -64,7 +65,7 @@ namespace ScreenDesigner
 					else if (prop.PropertyType == typeof(Brush))
 						prop.SetValue(obj, new SolidColorBrush(ColorFromString(Value)));
 					else
-						prop.SetValue(obj, Convert.ChangeType(int.Parse(Value), prop.PropertyType));
+						prop.SetValue(obj, Convert.ChangeType(Element.EvalInt(Value), prop.PropertyType));
 				}
 			}
 
@@ -112,6 +113,11 @@ namespace ScreenDesigner
 					throw new Exception("Invalid color");
 				return (Color)prop.GetValue(null);
 			}
+		}
+
+		class XmlCanvas : XmlRectangle
+		{
+			public string Folder { get; set; }
 		}
 
 		class XmlRectangle : XmlGraphic
@@ -234,7 +240,7 @@ namespace ScreenDesigner
 				}
 			}
 
-			public override string Value
+			public override string Content
 			{
 				set { ((TextBlock)Graphic).Text = value; }
 			}
@@ -297,7 +303,7 @@ namespace ScreenDesigner
 			{
 				set
 				{
-					XmlCanvas.Components[value].CloneTo(Owner);
+					XmlScreen.Components[value].CloneTo(Owner);
 				}
 			}
 		}
@@ -313,7 +319,7 @@ namespace ScreenDesigner
 
 			public string RefName { get; set; }
 
-			public override string Value
+			public override string Content
 			{
 				set
 				{
@@ -349,11 +355,11 @@ namespace ScreenDesigner
 
 		class XmlData : XmlGraphic
 		{
-			public override string Value
+			public override string Content
 			{
 				set
 				{
-					Owner.Parent.Value = value;
+					Owner.Parent.Content = value;
 				}
 			}
 		}
@@ -373,7 +379,7 @@ namespace ScreenDesigner
 					if (el.Graphic as XmlRow != null)
 					{
 						el.Top += iRowCur;
-						iRowCur += ColumnWidth;
+						iRowCur += RowHeight;
 					}
 					else if (el.Graphic as XmlDefault != null)
 						el.Children.Clear();
@@ -451,6 +457,7 @@ namespace ScreenDesigner
 			#region Public Properties
 
 			public string Name { get; set; }
+			public object Value { get; set; }
 			public int Top { get; set; }
 			public int Left { get; set; }
 			public int Width { get { return (int)Graphic.Width; } }
@@ -460,12 +467,12 @@ namespace ScreenDesigner
 			public Element Parent { get; set; }
 			public string Group { get; set; }
 			public string Location { get; set; }
-			public string Value
+			public string Content
 			{
 				set 
 				{
 					if (Graphic != null)
-						Graphic.Value = value;
+						Graphic.Content = value;
 				}
 			}
 
@@ -479,7 +486,7 @@ namespace ScreenDesigner
 				{ "TextBlock",  typeof(XmlTextBlock) },
 				{ "Image",		typeof(XmlImage) },
 				{ "HotSpot",	typeof(XmlHotSpot) },
-				{ "Canvas",		typeof(XmlRectangle) },
+				{ "Canvas",		typeof(XmlCanvas) },
 				{ "Ref",		typeof(XmlRef) },
 				{ "Set",		typeof(XmlSet) },
 				{ "#text",		typeof(XmlData) },
@@ -514,33 +521,37 @@ namespace ScreenDesigner
 				return CloneTo(new Element("", parent));
 			}
 
-			public void SetAttribute(string Attr, string Value)
+			public void SetAttribute(string attr, string value)
 			{
-				if (Attr == "Name")
+				switch (attr)
 				{
-					Name = Value;
-					return;		// don't set it in Graphics
-				}
+					case "Name":
+						Name = value;
+						break;
 
-				Graphic?.SetAttribute(Attr, Value);
-
-				// Assign our own properties
-				switch (Attr)
-				{
 					case "Top":
-						Top = int.Parse(Value);
+						Top = EvalInt(value);
 						break;
 
 					case "Left":
-						Left = int.Parse(Value);
+						Left = EvalInt(value);
 						break;
 
 					case "Group":
-						Group = Value;
+						Group = value;
 						break;
 
 					case "Location":
-						Location = Value;
+						Location = value;
+						break;
+
+					case "Value":
+						Value = EvalInt(value);
+						ExprContext.Variables[Name] = Value;
+						break;
+
+					default:
+						Graphic?.SetAttribute(attr, value);
 						break;
 				}
 			}
@@ -572,6 +583,16 @@ namespace ScreenDesigner
 				foreach (Element el in Children)
 					el.Draw(DrawList, x, y);
 			}
+
+			static public int EvalInt(string expr)
+			{
+				int i;
+
+				if (int.TryParse(expr, out i))
+					return i;
+				i = ExprContext.CompileGeneric<int>(expr).Evaluate();
+				return i;
+			}
 		}
 
 		class DrawResults
@@ -592,10 +613,11 @@ namespace ScreenDesigner
 
 		#region Constructor
 
-		public XmlCanvas()
+		public XmlScreen()
 		{
 			Components = new Dictionary<string, Element>();
 			Images = new List<NamedBitmap>();
+			ExprContext = new ExpressionContext();
 		}
 
 		#endregion
@@ -604,6 +626,7 @@ namespace ScreenDesigner
 		#region Fields
 
 		static Dictionary<string, Element> Components;
+		static ExpressionContext ExprContext;
 		List<NamedBitmap> Images;
 
 		#endregion
@@ -654,7 +677,7 @@ namespace ScreenDesigner
 			el = BuildElement(node);
 			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
-			bmp = new NamedBitmap(el.Name, el.Width, el.Height);
+			bmp = new NamedBitmap(el.Name, el.Width, el.Height, ((XmlCanvas)el.Graphic).Folder);
 			bmp.Locations = DrawList.Locations;
 			bmp.HotSpots = DrawList.HotSpots;
 			bmp.Bitmap.Render(DrawList.Visual);
@@ -673,7 +696,7 @@ namespace ScreenDesigner
 			}
 
 			if (node.Value != null)
-				el.Value = node.Value;
+				el.Content = node.Value;
 
 			foreach (XmlNode nodeChild in node.ChildNodes)
 				el.Children.Add(BuildElement(nodeChild, el));
@@ -712,16 +735,18 @@ namespace ScreenDesigner
 
 	class NamedBitmap
 	{
-		public NamedBitmap(string name, int width, int height)
+		public NamedBitmap(string name, int width, int height, string folder)
 		{
 			Name = name;
 			Height = height;
 			Width = width;
+			Folder = folder;
 			Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
 		}
 		public string Name { get; protected set; }
 		public int Height { get; protected set; }
 		public int Width { get; protected set; }
+		public string Folder { get; protected set; }
 		public RenderTargetBitmap Bitmap { get; protected set; }
 		public List<Location> Locations { get; set; }
 		public List<HotSpot> HotSpots { get; set; }

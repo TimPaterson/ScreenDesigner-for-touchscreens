@@ -97,7 +97,7 @@ namespace ScreenDesigner
 		bool LoadXml(string strXmlFileName)
 		{
 			XmlDocument doc;
-			XmlCanvas parser;
+			XmlScreen parser;
 			XmlReaderSettings settings;
 
 			doc = new XmlDocument();
@@ -130,7 +130,7 @@ namespace ScreenDesigner
 
 			try
 			{
-				parser = new XmlCanvas();
+				parser = new XmlScreen();
 				m_Images = parser.ParseXml(doc);
 				StartImageDisplay();
 				foreach (NamedBitmap bmp in m_Images)
@@ -292,7 +292,12 @@ namespace ScreenDesigner
 				// Output bitmap image
 				BmpBitmapEncoder encode = new BmpBitmapEncoder();
 				encode.Frames.Add(BitmapFrame.Create(bmp.Bitmap));
-				filename = Path.Combine(path, bmp.Name);
+				if (bmp.Folder != null)
+					filename = Path.Combine(path, bmp.Folder);
+				else
+					filename = path;
+				Directory.CreateDirectory(filename);
+				filename = Path.Combine(filename, bmp.Name);
 				using (Stream stream = File.Open(filename + ".bmp", FileMode.Create))
 					encode.Save(stream);
 
