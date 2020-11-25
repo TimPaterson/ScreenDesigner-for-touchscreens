@@ -46,6 +46,7 @@
       <xs:choice minOccurs="1" maxOccurs="unbounded">
         <xs:element ref="Component" maxOccurs="unbounded" />
         <xs:element ref="Canvas" maxOccurs="unbounded" />
+        <xs:element ref="Set" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
   </xs:element>

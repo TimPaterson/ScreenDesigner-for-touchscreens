@@ -26,14 +26,14 @@ namespace ScreenDesigner
 
 			public virtual int Height 
 			{ 
-				get { return (int)Graphic.Height; }
-				set { Graphic.Height = value; }
+				get { return (int)Visual.Height; }
+				set { Visual.Height = value; }
 			}
 
 			public virtual int Width
 			{ 
-				get { return (int)Graphic.Width; }
-				set { Graphic.Width = value; }
+				get { return (int)Visual.Width; }
+				set { Visual.Width = value; }
 			}
 
 			public virtual string Content
@@ -41,7 +41,7 @@ namespace ScreenDesigner
 				set { }
 			}
 
-			public FrameworkElement Graphic { get; set; }
+			public FrameworkElement Visual { get; set; }
 			public virtual Element Owner { get; set; }
 
 			public void SetAttribute(string Attr, string Value)
@@ -54,8 +54,10 @@ namespace ScreenDesigner
 					obj = this;
 				else
 				{
-					prop = Graphic?.GetType().GetProperty(Attr);
-					obj = Graphic;
+					prop = Visual?.GetType().GetProperty(Attr);
+					obj = Visual;
+					if (prop != null)
+						m_xmlClone = null;	// invalide cached copy
 				}
 
 				if (prop != null)
@@ -71,10 +73,10 @@ namespace ScreenDesigner
 
 			public virtual void Draw(DrawResults DrawList, int x, int y)
 			{
-				if (Graphic != null)
+				if (Visual != null)
 				{
-					Graphic.Arrange(new Rect(x, y, Width, Height));
-					DrawList.Visual.Children.Add(Graphic);
+					Visual.Arrange(new Rect(x, y, Width, Height));
+					DrawList.Visual.Children.Add(Visual);
 				}
 			}
 
@@ -83,11 +85,11 @@ namespace ScreenDesigner
 				XmlGraphic graphic;
 
 				graphic = (XmlGraphic)MemberwiseClone();
-				if (Graphic != null)
+				if (Visual != null)
 				{
 					if (m_xmlClone == null)
-						m_xmlClone = XamlWriter.Save(Graphic);
-					graphic.Graphic = (FrameworkElement)XamlReader.Load(new XmlTextReader(new StringReader(m_xmlClone)));
+						m_xmlClone = XamlWriter.Save(Visual);
+					graphic.Visual = (FrameworkElement)XamlReader.Load(new XmlTextReader(new StringReader(m_xmlClone)));
 				}
 				return graphic;
 			}
@@ -128,7 +130,7 @@ namespace ScreenDesigner
 
 				shape = new Rectangle();
 				shape.StrokeThickness = 0;
-				Graphic = shape;
+				Visual = shape;
 			}
 		}
 
@@ -140,7 +142,7 @@ namespace ScreenDesigner
 
 				shape = new Ellipse();
 				shape.StrokeThickness = 0;
-				Graphic = shape;
+				Visual = shape;
 			}
 		}
 
@@ -151,14 +153,14 @@ namespace ScreenDesigner
 				Line shape;
 
 				shape = new Line();
-				Graphic = shape;
+				Visual = shape;
 			}
 
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
 				Line line;
 
-				line = (Line)Graphic;
+				line = (Line)Visual;
 				if (Double.IsNaN(line.Height))
 					line.Height = Math.Abs(line.Y2 - line.Y1) + line.StrokeThickness;
 				if (Double.IsNaN(line.Width))
@@ -172,30 +174,29 @@ namespace ScreenDesigner
 		{
 			public XmlTextBlock()
 			{
-				Graphic = new TextBlock();
-				Graphic.HorizontalAlignment = HorizontalAlignment.Center;
-				Graphic.VerticalAlignment = VerticalAlignment.Center;
+				Visual = new TextBlock();
+				Visual.HorizontalAlignment = HorizontalAlignment.Center;
+				Visual.VerticalAlignment = VerticalAlignment.Center;
 			}
+
 			public override int Height { get; set; }
 			public override int Width { get; set; }
 
-			public override Element Owner 
+			public override void Draw(DrawResults DrawList, int x, int y)
 			{
-				get { return base.Owner; }
-				set
+				if (Owner.Parent.Graphic != null)
 				{
-					base.Owner = value;
-					if (Owner.Parent.Graphic != null)
-					{
+					if (Width == 0)
 						Width = Owner.Parent.Graphic.Width;
+					if (Height == 0)
 						Height = Owner.Parent.Graphic.Height;
-					}
 				}
+				base.Draw(DrawList, x, y);
 			}
 
 			public string FontFamily
 			{
-				set { ((TextBlock)Graphic).FontFamily = new FontFamily(value); }
+				set { ((TextBlock)Visual).FontFamily = new FontFamily(value); }
 			}
 
 			public string FontWeight
@@ -208,7 +209,7 @@ namespace ScreenDesigner
 					prop = typeof(FontWeights).GetProperty(value);
 					if (prop == null)
 						throw new Exception("Invalid FontWeight");
-					((TextBlock)Graphic).FontWeight = (FontWeight)prop.GetValue(null);
+					((TextBlock)Visual).FontWeight = (FontWeight)prop.GetValue(null);
 				}
 			}
 
@@ -222,7 +223,7 @@ namespace ScreenDesigner
 					prop = typeof(FontStyles).GetProperty(value);
 					if (prop == null)
 						throw new Exception("Invalid FontStyle");
-					((TextBlock)Graphic).FontStyle = (FontStyle)prop.GetValue(null);
+					((TextBlock)Visual).FontStyle = (FontStyle)prop.GetValue(null);
 				}
 			}
 
@@ -236,13 +237,13 @@ namespace ScreenDesigner
 					prop = typeof(FontStretches).GetProperty(value);
 					if (prop == null)
 						throw new Exception("Invalid FontStretch");
-					((TextBlock)Graphic).FontStretch = (FontStretch)prop.GetValue(null);
+					((TextBlock)Visual).FontStretch = (FontStretch)prop.GetValue(null);
 				}
 			}
 
 			public override string Content
 			{
-				set { ((TextBlock)Graphic).Text = value; }
+				set { ((TextBlock)Visual).Text = value; }
 			}
 		}
 
@@ -253,7 +254,7 @@ namespace ScreenDesigner
 				Image image;
 
 				image = new Image();
-				Graphic = image;
+				Visual = image;
 			}
 
 			public string Source
@@ -267,7 +268,7 @@ namespace ScreenDesigner
 					bmp.BeginInit();
 					bmp.UriSource = new Uri(value, UriKind.RelativeOrAbsolute);
 					bmp.EndInit();
-					image = ((Image)Graphic);
+					image = ((Image)Visual);
 					image.Source = bmp;
 					if (Double.IsNaN(image.Height))
 						image.Height = bmp.PixelHeight;
@@ -379,7 +380,7 @@ namespace ScreenDesigner
 					if (el.Graphic as XmlRow != null)
 					{
 						el.Top += iRowCur;
-						iRowCur += RowHeight;
+						iRowCur = el.Top + RowHeight;
 					}
 					else if (el.Graphic as XmlDefault != null)
 						el.Children.Clear();
@@ -405,7 +406,7 @@ namespace ScreenDesigner
 				foreach (Element el in Owner.Children)
 				{
 					el.Left += iColCur;
-					iColCur += iColWidth;
+					iColCur = iColWidth + el.Left;
 				}
 			}
 		}
@@ -649,6 +650,12 @@ namespace ScreenDesigner
 
 					case "Canvas":
 						DefineCanvas(el);
+						break;
+
+					case "Set":
+						// Don't need result element, 
+						// value is put in ExprContext
+						BuildElement(el);
 						break;
 				}
 			}
