@@ -286,6 +286,13 @@ namespace ScreenDesigner
 			{
 				HotSpot spot;
 
+				if (Owner.Parent.Graphic != null)
+				{
+					if (Width == 0)
+						Width = Owner.Parent.Graphic.Width;
+					if (Height == 0)
+						Height = Owner.Parent.Graphic.Height;
+				}
 				spot = new HotSpot();
 				spot.Name = Owner.Name;
 				spot.Group = Owner.Group;

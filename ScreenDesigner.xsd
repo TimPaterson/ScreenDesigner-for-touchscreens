@@ -197,8 +197,8 @@
   <xs:element name="HotSpot">
     <xs:complexType>
       <xs:attributeGroup ref="Element" />
-      <xs:attribute ref="Height" use="required" />
-      <xs:attribute ref="Width" use="required" />
+      <xs:attribute ref="Height" />
+      <xs:attribute ref="Width" />
     </xs:complexType>
   </xs:element>
   
