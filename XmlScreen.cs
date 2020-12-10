@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Xml;
+using System.Xml.Linq;
 using Flee.PublicTypes;
 
 namespace ScreenDesigner
@@ -191,6 +192,14 @@ namespace ScreenDesigner
 					if (Height == 0)
 						Height = Owner.Parent.Graphic.Height;
 				}
+				else if (Width == 0 || Height == 0)
+				{
+					Visual.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+					if (Width == 0)
+						Width = (int)Math.Ceiling(Visual.DesiredSize.Width);
+					if (Height == 0)
+						Height = (int)Math.Ceiling(Visual.DesiredSize.Height);
+				}
 				base.Draw(DrawList, x, y);
 			}
 
@@ -343,7 +352,7 @@ namespace ScreenDesigner
 						match = s_regAssignRef.Match(value);
 
 					if (!match.Success)
-						throw new Exception("Invalid Set: " + value);
+						throw new Exception($"Invalid Set expression: '{value}'");
 
 					for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
 					{
@@ -554,6 +563,8 @@ namespace ScreenDesigner
 						break;
 
 					case "Value":
+						if (Name == null)
+							throw new Exception("Name property must be set before setting Value.");
 						Value = EvalInt(value);
 						ExprContext.Variables[Name] = Value;
 						break;
@@ -598,7 +609,14 @@ namespace ScreenDesigner
 
 				if (int.TryParse(expr, out i))
 					return i;
-				i = ExprContext.CompileGeneric<int>(expr).Evaluate();
+				try
+				{
+					i = ExprContext.CompileGeneric<int>(expr).Evaluate();
+				}
+				catch
+				{
+					throw new Exception("Error attempting to evaluate expression");
+				}
 				return i;
 			}
 		}
@@ -642,14 +660,11 @@ namespace ScreenDesigner
 
 		#region Public Methods
 
-		internal List<NamedBitmap> ParseXml(XmlDocument xml)
+		internal List<NamedBitmap> ParseXml(XDocument xml)
 		{
-			XmlNode elProject;
-
-			elProject = xml.DocumentElement;
-			foreach (XmlNode el in elProject.ChildNodes)
+			foreach (XElement el in ((XElement)(xml.FirstNode)).Elements())
 			{
-				switch (el.Name)
+				switch (el.Name.LocalName)
 				{
 					case "Component":
 						DefineComponent(el);
@@ -674,7 +689,7 @@ namespace ScreenDesigner
 
 		#region Private Methods
 
-		void DefineComponent(XmlNode node)
+		void DefineComponent(XElement node)
 		{
 			Element el;
 
@@ -682,7 +697,7 @@ namespace ScreenDesigner
 			Components.Add(el.Name, el);
 		}
 
-		void DefineCanvas(XmlNode node)
+		void DefineCanvas(XElement node)
 		{
 			Element el;
 			DrawResults DrawList;
@@ -698,22 +713,41 @@ namespace ScreenDesigner
 			Images.Add(bmp);
 		}
 
-		Element BuildElement(XmlNode node, Element parent = null)
+		Element BuildElement(XElement node, Element parent = null)
 		{
 			Element el;
+			XAttribute attrError;
 
-			el = new Element(node.Name, parent);
-			if (node.Attributes != null)
+			attrError = null;
+			try
 			{
-				foreach (XmlAttribute attr in node.Attributes)
-					el.SetAttribute(attr.Name, attr.Value);
+				el = new Element(node.Name.LocalName, parent);
+				if (node.HasAttributes)
+				{
+					foreach (XAttribute attr in node.Attributes())
+					{
+						attrError = attr;
+						el.SetAttribute(attr.Name.LocalName, attr.Value);
+					}
+				}
+				attrError = null;
+
+				if (!string.IsNullOrEmpty(node.Value))
+					el.Content = node.Value;
+
+				foreach (XElement nodeChild in node.Elements())
+					el.Children.Add(BuildElement(nodeChild, el));
 			}
-
-			if (node.Value != null)
-				el.Content = node.Value;
-
-			foreach (XmlNode nodeChild in node.ChildNodes)
-				el.Children.Add(BuildElement(nodeChild, el));
+			catch (CaughtException)
+			{
+				throw;	// already reported
+			}
+			catch (Exception exc)
+			{
+				var info = (IXmlLineInfo)node;
+				string strErr = attrError != null ? $" setting attribute '{attrError.Name.LocalName}' to '{attrError.Value}'" : "";
+				throw new CaughtException($"Error at line {info.LineNumber}{strErr}:\n{exc.Message}");
+			}
 
 			return el;
 		}
@@ -723,6 +757,12 @@ namespace ScreenDesigner
 
 
 	#region Result Types
+
+	class CaughtException : Exception
+	{ 
+		public CaughtException(string message) : base(message)
+		{ }
+	}
 
 	class Location
 	{

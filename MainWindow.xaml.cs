@@ -4,13 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Xml;
+using System.Xml.Linq;
 using System.Xml.Schema;
 
 namespace ScreenDesigner
@@ -20,6 +21,7 @@ namespace ScreenDesigner
 	/// </summary>
 	public partial class MainWindow : Window
 	{
+		public const string StrTitle = "Screen Designer";
 		const string StrXmlSchemaPath = @"..\..\ScreenDesigner.xsd";
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
 		const int GroupExtraHeight = 30;
@@ -72,14 +74,9 @@ namespace ScreenDesigner
 			m_watcher.Deleted += Watcher_OnChanged;
 			m_watcher.Renamed += Watcher_OnRenamed;
 			m_dispatcher = Dispatcher.CurrentDispatcher;
-		}
-
-		static T Clone<T>(T obj) where T : Visual
-		{
-			string xml = XamlWriter.Save(obj);
-			var xmlTextReader = new XmlTextReader(new StringReader(xml));
-			var deepCopyObject = (T)XamlReader.Load(xmlTextReader);
-			return deepCopyObject;
+			m_timer = new Timer(10);    // Delay 10 ms after file change event
+			m_timer.AutoReset = false;
+			m_timer.Elapsed += Timer_OnElapsed;
 		}
 
 
@@ -88,6 +85,7 @@ namespace ScreenDesigner
 		FileSystemWatcher m_watcher;
 		Dispatcher m_dispatcher;
 		List<NamedBitmap> m_Images;
+		Timer m_timer;
 
 		#endregion
 
@@ -96,35 +94,36 @@ namespace ScreenDesigner
 
 		bool LoadXml(string strXmlFileName)
 		{
-			XmlDocument doc;
+			XDocument doc;
 			XmlScreen parser;
-			XmlReaderSettings settings;
 
-			doc = new XmlDocument();
+			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
+
 			try
 			{
-				settings = new XmlReaderSettings();
-				settings.Schemas.Add(null, StrXmlSchemaPath);
-				settings.ValidationType = ValidationType.Schema;
-				settings.IgnoreWhitespace = true;
-				settings.IgnoreComments = true;
-				using (XmlReader reader = XmlReader.Create(strXmlFileName, settings))
-					doc.Load(reader);
+				doc = XDocument.Load(strXmlFileName, LoadOptions.SetLineInfo);
+				XmlSchemaSet schemas = new XmlSchemaSet();
+				schemas.Add(null, StrXmlSchemaPath);
+				doc.Validate(schemas, null);
 			}
 			catch (XmlException exc)
 			{
-				// UNDONE: XML parsing error
-				Debug.WriteLine(exc.Message);
+				MessageBox.Show($"XML Error:\n{exc.Message}", 
+					StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+				pnlImages.Children.Clear();
 				return true;	// file exists, remember it
 			}
 			catch (XmlSchemaValidationException exc)
 			{
-				Debug.WriteLine(exc.Message + "on line " + exc.LineNumber);
+				MessageBox.Show($"XML Error at line {exc.LineNumber}:\n{exc.Message}", 
+					StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+				pnlImages.Children.Clear();
 				return true;	// file exists, remember it
 			}
 			catch (Exception exc)
 			{
-				Debug.WriteLine(exc.Message);
+				MessageBox.Show($"Error:\n{exc.Message}", StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+				pnlImages.Children.Clear();
 				return false;
 			}
 
@@ -137,12 +136,15 @@ namespace ScreenDesigner
 					DisplayImage(bmp);
 				EndImageDisplay();
 			}
+			catch (CaughtException exc)
+			{
+				MessageBox.Show(exc.Message, StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+				pnlImages.Children.Clear();
+			}
 			catch (Exception exc)
 			{
-				// UNDONE: parsing error
-				Debug.WriteLine(exc.Message);
-				if (exc.InnerException != null)
-					Debug.WriteLine(exc.InnerException.Message);
+				MessageBox.Show($"Error:\n{exc.Message}", StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
+				pnlImages.Children.Clear();
 			}
 			return true;
 		}
@@ -212,10 +214,17 @@ namespace ScreenDesigner
 
 		void Watcher_OnChanged(object source, FileSystemEventArgs e)
 		{
-			m_dispatcher.InvokeAsync(LoadXmlDefault);
+			m_timer.Stop();
+			m_timer.Start();
 		}
 
 		void Watcher_OnRenamed(object source, RenamedEventArgs e)
+		{
+			m_timer.Stop();
+			m_timer.Start();
+		}
+
+		void Timer_OnElapsed(object source, ElapsedEventArgs e)
 		{
 			m_dispatcher.InvokeAsync(LoadXmlDefault);
 		}
