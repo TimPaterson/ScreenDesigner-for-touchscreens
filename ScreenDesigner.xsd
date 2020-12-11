@@ -135,6 +135,8 @@
       <xs:simpleContent>
         <xs:extension base="xs:string">
           <xs:attributeGroup ref="Element" />
+          <xs:attribute ref="Height" />
+          <xs:attribute ref="Width" />
           <xs:attribute name="Text" type="xs:string" />
           <xs:attribute name="FontFamily" type="xs:string" />
           <xs:attribute name="FontWeight" type="xs:string" />
@@ -184,13 +186,19 @@
   <xs:element name="Row">
     <xs:complexType>
       <xs:sequence>
-        <xs:element ref="Column" minOccurs="1" maxOccurs="unbounded" />
+        <xs:element ref="Default" minOccurs="0" />
+        <xs:choice minOccurs="1" maxOccurs="unbounded">
+          <xs:element ref="Column" minOccurs="0" maxOccurs="unbounded" />
+          <xs:element ref="ColumnNoDefault" minOccurs="0" maxOccurs="unbounded" />
+        </xs:choice>
       </xs:sequence>
       <xs:attributeGroup ref="Element" />
     </xs:complexType>
   </xs:element>
   
   <xs:element name="Column" type="Content_t" />
+  
+  <xs:element name="ColumnNoDefault" type="Content_t" />
   
   <xs:element name="Default" type="Content_t" />
   

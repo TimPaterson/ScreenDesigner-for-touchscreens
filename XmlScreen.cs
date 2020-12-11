@@ -24,17 +24,19 @@ namespace ScreenDesigner
 		class XmlGraphic
 		{
 			string m_xmlClone;
+			int m_Height;
+			int m_Width;
 
 			public virtual int Height 
 			{ 
-				get { return (int)Visual.Height; }
-				set { Visual.Height = value; }
+				get { return Visual == null ? m_Height : (int)Visual.Height; }
+				set { if (Visual == null) m_Height = value; else Visual.Height = value; }
 			}
 
 			public virtual int Width
 			{ 
-				get { return (int)Visual.Width; }
-				set { Visual.Width = value; }
+				get { return Visual == null ? m_Width : (int)Visual.Width; }
+				set { if (Visual == null) m_Width = value; else Visual.Width = value; }
 			}
 
 			public virtual string Content
@@ -187,12 +189,12 @@ namespace ScreenDesigner
 			{
 				if (Owner.Parent.Graphic != null)
 				{
-					if (Width == 0)
+					if (Width == 0 && Owner.Left == 0)
 						Width = Owner.Parent.Graphic.Width;
-					if (Height == 0)
+					if (Height == 0 && Owner.Top == 0)
 						Height = Owner.Parent.Graphic.Height;
 				}
-				else if (Width == 0 || Height == 0)
+				if (Width == 0 || Height == 0)
 				{
 					Visual.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 					if (Width == 0)
@@ -289,8 +291,6 @@ namespace ScreenDesigner
 
 		class XmlHotSpot : XmlGraphic
 		{
-			public override int Height { get; set; }
-			public override int Width { get; set; }
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
 				HotSpot spot;
@@ -364,19 +364,9 @@ namespace ScreenDesigner
 							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
 							el.SetAttribute(match.Groups["attr"].Captures[i].Value, val);
 						}
-
+						else
+							throw new Exception($"Set can't find an element named '{RefName}'");
 					}
-				}
-			}
-		}
-
-		class XmlData : XmlGraphic
-		{
-			public override string Content
-			{
-				set
-				{
-					Owner.Parent.Content = value;
 				}
 			}
 		}
@@ -421,6 +411,8 @@ namespace ScreenDesigner
 				iColCur = 0;
 				foreach (Element el in Owner.Children)
 				{
+					if ((el.Graphic as XmlDefault)?.IsCopy == false)
+						continue;		// Ignore original Row default
 					el.Left += iColCur;
 					iColCur = iColWidth + el.Left;
 				}
@@ -434,16 +426,20 @@ namespace ScreenDesigner
 				get { return base.Owner; }
 				set
 				{
-					Element grid;
 					Element content;
 
-					// Get default content
-					grid = value.Parent.Parent;
-					content = grid.Children[0];
+					// Row may have default content
+					content = value.Parent;
+					if (content.Children.Count == 0 || (content.Children[0].Graphic as XmlDefault)?.IsCopy == true)
+						content = value.Parent.Parent;  // Move up to Grid
+
+					content = content.Children[0];
 					if (content.Graphic.GetType() == typeof(XmlDefault))
 					{
 						// Default contents exists, substitute it
 						content.CloneTo(value);
+						// Mark the copy to distinguish it from user's Default
+						((XmlDefault)value.Graphic).IsCopy = true;
 					}
 					else
 						base.Owner = value;
@@ -451,8 +447,13 @@ namespace ScreenDesigner
 			}
 		}
 
+		class XmlColumnNoDefault : XmlGraphic
+		{
+		}
+
 		class XmlDefault : XmlGraphic
 		{
+			public bool IsCopy { get; set; }
 		}
 
 		class Element
@@ -506,10 +507,10 @@ namespace ScreenDesigner
 				{ "Canvas",		typeof(XmlCanvas) },
 				{ "Ref",		typeof(XmlRef) },
 				{ "Set",		typeof(XmlSet) },
-				{ "#text",		typeof(XmlData) },
 				{ "Grid",       typeof(XmlGrid) },
 				{ "Row",		typeof(XmlRow) },
 				{ "Column",		typeof(XmlColumn) },
+				{ "ColumnNoDefault", typeof(XmlColumnNoDefault) },
 				{ "Default",	typeof(XmlDefault) },
 			};
 
@@ -748,7 +749,6 @@ namespace ScreenDesigner
 				string strErr = attrError != null ? $" setting attribute '{attrError.Name.LocalName}' to '{attrError.Value}'" : "";
 				throw new CaughtException($"Error at line {info.LineNumber}{strErr}:\n{exc.Message}");
 			}
-
 			return el;
 		}
 
