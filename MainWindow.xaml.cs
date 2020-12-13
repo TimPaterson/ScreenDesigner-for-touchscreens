@@ -27,41 +27,6 @@ namespace ScreenDesigner
 		const int GroupExtraHeight = 30;
 		const int GroupExtraWidth = 20;
 
-		// Output file
-		const string StrStartOutput = "// Locations and Hotspots";
-		const string StrMacroUndef = "#undef {0}";
-		// Locations
-		const string StrLocationMacroPredfine = 
-@"#ifndef {0}
-#define {0}(a,b,c)
-#endif";
-		const string StrStartLocations = "// Locations";
-		const string StrLocationMacro = "DEFINE_LOCATION";
-		const string StrDefineLocation = StrLocationMacro + "({0}, {1}, {2})";
-		// Hotspots
-		const string StrHotspotMacroPredfine = 
-@"#ifndef {0}
-#define {0}(a,b,c,d,e,f)
-#endif";
-		const string StrStartHotspots = "// Hotspots";
-		const string StrHotspotMacro = "DEFINE_HOTSPOT";
-		const string StrDefineHotspot = StrHotspotMacro + "({0}, {1}, {2}, {3}, {4}, {5})";
-		// Hotspot groups
-		const string StrGroupStartEndPredfine = 
-@"#ifndef {0}
-#define {0}(a)
-#endif";
-		const string StrStartGroupMacro = "START_GROUP";
-		const string StrDefineGroupStart = StrStartGroupMacro + "({0})";
-		const string StrEndGroupMacro = "END_GROUP";
-		const string StrDefineGroupEnd = StrEndGroupMacro + "({0})";
-		const string StrGroupMacroPredfine = 
-@"#ifndef {0}_{1}
-#define {0}_{1}(a,b,c,d,e,f)
-#endif";
-		const string StrDefineHotspotGroup = StrHotspotMacro + "_{1}({0}, {1}, {2}, {3}, {4}, {5})";
-		const string StrGroupUndef = "#undef {0}_{1}";
-
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -185,6 +150,8 @@ namespace ScreenDesigner
 			Border border;
 			Image image;
 
+			CondenseColors(bmp);
+
 			image = new Image();
 			image.Width = bmp.Width;
 			image.Height = bmp.Height;
@@ -205,6 +172,68 @@ namespace ScreenDesigner
 			group.HorizontalAlignment = HorizontalAlignment.Left;
 
 			pnlImages.Children.Add(group);
+		}
+
+		void CondenseColors(NamedBitmap bmp)
+		{
+			byte[] arPx32;
+			int color;
+
+			if (bmp.BytesPerPixel == 3)
+				return;
+
+			arPx32 = new byte[bmp.Height * bmp.Width * 4];
+			bmp.Bitmap.CopyPixels(arPx32, bmp.Width * 4, 0);
+
+			if (bmp.BytesPerPixel == 1)
+			{
+				// Reduce color resolution to 3:3:2 red:green:blue
+				for (int i = 0; i < arPx32.Length; i += 4)
+				{
+					color = ((int)arPx32[i] + 0x20);   // 2 bits of blue
+					color -= (color & 0x100) >> 2;  // reduce if above 0xFF
+					color &= 0xC0;
+					color |= (color >> 2) | (color >> 4) | (color >> 6);
+					arPx32[i] = (byte)color;
+
+					color = ((int)arPx32[i + 1] + 0x10);   // 3 bits of green
+					color -= (color & 0x100) >> 3;	// reduce if above 0xFF
+					color &= 0xE0;
+					color |= (color >> 3) | (color >> 6);
+					arPx32[i + 1] = (byte)color;
+
+					color = ((int)arPx32[i + 2] + 0x10);   // 3 bits of red
+					color -= (color & 0x100) >> 3;  // reduce if above 0xFF
+					color &= 0xE0;
+					color |= (color >> 3) | (color >> 6);
+					arPx32[i + 2] = (byte)color;
+				}
+			}
+			else
+			{
+				// Reduce color resolution to 5:6:5 red:green:blue
+				for (int i = 0; i < arPx32.Length; i += 4)
+				{
+					color = ((int)arPx32[i] + 0x04);   // 5 bits of blue
+					color -= (color & 0x100) >> 5;  // reduce if above 0xFF
+					color &= 0xF8;
+					color |= color >> 5;
+					arPx32[i] = (byte)color;
+
+					color = ((int)arPx32[i + 1] + 0x02);   // 6 bits of green
+					color -= (color & 0x100) >> 6;  // reduce if above 0xFF
+					color &= 0xFC;
+					color |= color >> 6;
+					arPx32[i + 1] = (byte)color;
+
+					color = ((int)arPx32[i + 2] + 0x04);   // 5 bits of red
+					color -= (color & 0x100) >> 5;  // reduce if above 0xFF
+					color &= 0xF8;
+					color |= color >> 5;
+					arPx32[i + 2] = (byte)color;
+				}
+			}
+			bmp.Bitmap = BitmapSource.Create(bmp.Width, bmp.Height, 96, 96, PixelFormats.Pbgra32, null, arPx32, bmp.Width * 4);
 		}
 
 		#endregion
@@ -285,115 +314,24 @@ namespace ScreenDesigner
 
 		private void btnSave_Click(object sender, RoutedEventArgs e)
 		{
+			FileGenerator output;
 			string path;
-			string filename;
-			HashSet<string> groups;
-			bool fNoGroup;
+
+			output = new FileGenerator();
 
 			if (Settings.Default.OutputFileFolder != null)
 				path = Settings.Default.OutputFileFolder;
 			else
 				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
 
-			ColorContext clrSrc = new ColorContext(PixelFormats.Pbgra32);
-			ColorContext clrDst = new ColorContext(PixelFormats.Bgr565);
+			path = Path.Combine(path, Path.GetFileNameWithoutExtension(Settings.Default.XmlFileName));
+			output.Open(path + ".h", path + ".bin");
 
 			// Ouput each image as .bmp and associated .h file with hotspots and locations
 			foreach (NamedBitmap bmp in m_Images)
-			{
-				ColorConvertedBitmap cvt;
-				byte[] arPx = new byte[bmp.Height * bmp.Width * 2];
+				output.WriteImage(bmp);
 
-				cvt = new ColorConvertedBitmap(bmp.Bitmap, clrSrc, clrDst, PixelFormats.Bgr565);
-				cvt.CopyPixels(arPx, bmp.Width * 2, 0);
-
-				// Output bitmap image
-				if (bmp.Folder != null)
-					filename = Path.Combine(path, bmp.Folder);
-				else
-					filename = path;
-				Directory.CreateDirectory(filename);
-				filename = Path.Combine(filename, bmp.Name);
-				File.WriteAllBytes(filename + ".bin", arPx);
-
-				if (bmp.Locations.Count != 0 || bmp.HotSpots.Count != 0)
-				{
-					// Output .h file
-					using (StreamWriter writer = new StreamWriter(filename + ".h"))
-					{
-						groups = new HashSet<string>();
-						fNoGroup = false;
-						writer.WriteLine(StrStartOutput);
-
-						if (bmp.Locations.Count != 0)
-						{
-							writer.WriteLine(StrStartLocations);
-							writer.WriteLine(StrLocationMacroPredfine, StrLocationMacro);
-							writer.WriteLine();
-							foreach (Location loc in bmp.Locations)
-								writer.WriteLine(StrDefineLocation, loc.Name, loc.X, loc.Y);
-							writer.WriteLine();
-						}
-
-						if (bmp.HotSpots.Count != 0)
-						{
-							// Firset output all hotspots, regardess of group
-							writer.WriteLine(StrStartHotspots);
-							writer.WriteLine(StrHotspotMacroPredfine, StrHotspotMacro);
-							writer.WriteLine();
-							foreach (HotSpot spot in bmp.HotSpots)
-							{
-								writer.WriteLine(StrDefineHotspot, spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
-								if (string.IsNullOrEmpty(spot.Group))
-								{
-									fNoGroup = true;
-									spot.Group = "";	// make sure not null
-								}
-								else
-									groups.Add(spot.Group);
-							}
-							writer.WriteLine();
-
-							// Now output them by group
-							if (groups.Count != 0)
-							{
-								if (fNoGroup)
-									groups.Add("");
-								writer.WriteLine(StrGroupStartEndPredfine, StrStartGroupMacro);
-								writer.WriteLine(StrGroupStartEndPredfine, StrEndGroupMacro);
-							}
-							foreach (string group in groups)
-							{
-								writer.WriteLine(StrGroupMacroPredfine, StrHotspotMacro, group);
-								writer.WriteLine();
-								writer.WriteLine(StrDefineGroupStart, group);
-								foreach (HotSpot spot in bmp.HotSpots)
-								{
-									if (spot.Group == group)
-										writer.WriteLine(StrDefineHotspotGroup, spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
-								}
-								writer.WriteLine(StrDefineGroupEnd, group);
-								writer.WriteLine();
-							}
-						}
-
-						if (bmp.Locations.Count != 0)
-							writer.WriteLine(StrMacroUndef, StrLocationMacro);
-
-						if (bmp.HotSpots.Count != 0)
-						{
-							writer.WriteLine(StrMacroUndef, StrHotspotMacro);
-							foreach (string group in groups)
-								writer.WriteLine(StrGroupUndef, StrHotspotMacro, group);
-							if (groups.Count != 0)
-							{
-								writer.WriteLine(StrMacroUndef, StrStartGroupMacro);
-								writer.WriteLine(StrMacroUndef, StrEndGroupMacro);
-							}
-						}
-					}
-				}
-			}
+			output.Close();
 		}
 
 		private void btnBrowse_Click(object sender, RoutedEventArgs e)

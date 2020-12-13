@@ -26,6 +26,14 @@
     <xs:attribute ref="Value" />
   </xs:attributeGroup>
 
+  <xs:simpleType name="BitsPerPixel">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Color8bpp" />
+      <xs:enumeration value="Color16bpp" />
+      <xs:enumeration value="Color24bpp" />
+    </xs:restriction>
+  </xs:simpleType>
+
   <!-- definition of complex elements -->
   <xs:complexType name="TopContent_t">
     <xs:choice maxOccurs="unbounded">
@@ -36,6 +44,7 @@
       <xs:element ref="TextBlock" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Image" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
     </xs:choice>
@@ -47,6 +56,7 @@
         <xs:element ref="Component" maxOccurs="unbounded" />
         <xs:element ref="Canvas" maxOccurs="unbounded" />
         <xs:element ref="Set" maxOccurs="unbounded" />
+        <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -68,7 +78,7 @@
         <xs:attribute ref="Height" use="required"/>
         <xs:attribute ref="Width" use="required"/>
         <xs:attribute ref="Fill" use="required"/>
-        <xs:attribute name="Folder" type="xs:string" />
+        <xs:attribute name="ColorDepth" type="BitsPerPixel" use="required"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -159,17 +169,19 @@
     </xs:complexType>
   </xs:element>
 
-  <xs:element name="Set">
-    <xs:complexType>
-      <xs:simpleContent>
-        <xs:extension base="xs:string">
-          <xs:attribute ref="Name"/>
-          <xs:attribute ref="Value" />
-          <xs:attribute ref="RefName" />
-        </xs:extension>
-      </xs:simpleContent>
-    </xs:complexType>
-  </xs:element>
+  <xs:complexType name="Set_t">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute ref="Name"/>
+        <xs:attribute ref="Value" />
+        <xs:attribute ref="RefName" />
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  
+  <xs:element name="Set" type="Set_t" />
+
+  <xs:element name="SetString" type="Set_t" />
 
   <xs:element name="Grid">
     <xs:complexType>

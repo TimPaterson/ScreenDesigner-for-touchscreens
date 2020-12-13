@@ -19,6 +19,10 @@ namespace ScreenDesigner
 {
 	class XmlScreen
 	{
+		public const string StrColorDepth8 = "Color8bpp";
+		public const string StrColorDepth16 = "Color16bpp";
+		public const string StrColorDepth24 = "Color24bpp";
+
 		#region Types
 
 		class XmlGraphic
@@ -115,14 +119,25 @@ namespace ScreenDesigner
 				// Try looking it up by name
 				prop = typeof(Colors).GetProperty(color);
 				if (prop == null)
-					throw new Exception("Invalid color");
+					throw new Exception($"Invalid color name: {color}");
 				return (Color)prop.GetValue(null);
 			}
 		}
 
 		class XmlCanvas : XmlRectangle
 		{
-			public string Folder { get; set; }
+			string m_depth;
+
+			public string ColorDepth 
+			{
+				get => m_depth;
+				set
+				{
+					if (value != StrColorDepth8 && value != StrColorDepth16 && value != StrColorDepth24)
+						throw new Exception($"ColorDepth must be one of the following string values: '{StrColorDepth8}', '{StrColorDepth16}', or '{StrColorDepth24}'.");
+					m_depth = value;
+				}
+			}
 		}
 
 		class XmlRectangle : XmlGraphic
@@ -327,12 +342,12 @@ namespace ScreenDesigner
 
 		class XmlSet : XmlGraphic
 		{
-			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=\\s*((\"(?<val>([^\"\\\\]|\\\\\")*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
+			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
 			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)." + RegAssignRef;
 
 			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
 			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
-			static Regex s_regUnescape = new Regex(@"\\(.)");
+			protected static Regex s_regUnescape = new Regex(@"\\(.)");
 
 			public string RefName { get; set; }
 
@@ -366,6 +381,64 @@ namespace ScreenDesigner
 						}
 						else
 							throw new Exception($"Set can't find an element named '{RefName}'");
+					}
+				}
+			}
+		}
+
+		class XmlSetString : XmlSet
+		{
+			const string RegExpression = "\\s*(?<val>((\"(([^\"\\\\]|\\\\.)*)\")|([^;\"\\\\]|\\\\.)+)+)";
+			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpression;
+			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)." + RegAssignRef;
+
+			static Regex s_regExpression = new Regex("^" + RegExpression + "\\s*$");
+			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
+			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
+
+			public override string Content
+			{
+				set
+				{
+					Match match;
+					Element el;
+					string refName;
+					string val;
+
+					refName = RefName;
+					if (RefName == null)
+					{
+						match = s_regAssign.Match(value);
+						if (!match.Success && Owner.Name != null && Owner.Value == null)
+						{
+							// Maybe we're using the content to set the name variable
+							match = s_regExpression.Match(value);
+							if (match.Success && match.Groups["val"].Captures.Count == 1)
+							{
+								val = s_regUnescape.Replace(match.Groups["val"].Captures[0].Value, "$1");
+								Owner.Value = Element.EvalString(val);
+								return;
+							}
+						}
+					}
+					else
+						match = s_regAssignRef.Match(value);
+
+					if (!match.Success)
+						throw new Exception($"Invalid SetString expression: '{value}'");
+
+					for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
+					{
+						if (RefName == null)
+							refName = match.Groups["ref"].Captures[i].Value;
+						el = Owner.Parent.FindChild(refName);
+						if (el != null)
+						{
+							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
+							el.SetAttribute(match.Groups["attr"].Captures[i].Value, Element.EvalString(val));
+						}
+						else
+							throw new Exception($"SetString can't find an element named '{RefName}'");
 					}
 				}
 			}
@@ -472,10 +545,25 @@ namespace ScreenDesigner
 				}
 			}
 
+			object m_Value;
+
 			#region Public Properties
 
 			public string Name { get; set; }
-			public object Value { get; set; }
+			public object Value 
+			{ 
+				get => m_Value; 
+				set
+				{
+					if (Name == null)
+						throw new Exception("Name property must be set before setting Value.");
+					if (!(Graphic is XmlSetString))
+						m_Value = EvalInt((string)value);
+					else
+						m_Value = value;
+					ExprContext.Variables[Name] = m_Value;
+				}
+			}
 			public int Top { get; set; }
 			public int Left { get; set; }
 			public int Width { get { return (int)Graphic.Width; } }
@@ -507,6 +595,7 @@ namespace ScreenDesigner
 				{ "Canvas",		typeof(XmlCanvas) },
 				{ "Ref",		typeof(XmlRef) },
 				{ "Set",		typeof(XmlSet) },
+				{ "SetString",	typeof(XmlSetString) },
 				{ "Grid",       typeof(XmlGrid) },
 				{ "Row",		typeof(XmlRow) },
 				{ "Column",		typeof(XmlColumn) },
@@ -564,10 +653,7 @@ namespace ScreenDesigner
 						break;
 
 					case "Value":
-						if (Name == null)
-							throw new Exception("Name property must be set before setting Value.");
-						Value = EvalInt(value);
-						ExprContext.Variables[Name] = Value;
+						Value = value;
 						break;
 
 					default:
@@ -619,6 +705,21 @@ namespace ScreenDesigner
 					throw new Exception("Error attempting to evaluate expression");
 				}
 				return i;
+			}
+
+			static public string EvalString(string expr)
+			{
+				string str;
+
+				try
+				{
+					str = ExprContext.CompileGeneric<string>(expr).Evaluate();
+				}
+				catch
+				{
+					throw new Exception("Error attempting to evaluate expression");
+				}
+				return str;
 			}
 		}
 
@@ -676,6 +777,7 @@ namespace ScreenDesigner
 						break;
 
 					case "Set":
+					case "SetString":
 						// Don't need result element, 
 						// value is put in ExprContext
 						BuildElement(el);
@@ -707,10 +809,10 @@ namespace ScreenDesigner
 			el = BuildElement(node);
 			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
-			bmp = new NamedBitmap(el.Name, el.Width, el.Height, ((XmlCanvas)el.Graphic).Folder);
+			bmp = new NamedBitmap(el.Name, el.Width, el.Height, ((XmlCanvas)el.Graphic).ColorDepth);
 			bmp.Locations = DrawList.Locations;
 			bmp.HotSpots = DrawList.HotSpots;
-			bmp.Bitmap.Render(DrawList.Visual);
+			((RenderTargetBitmap)bmp.Bitmap).Render(DrawList.Visual);
 			Images.Add(bmp);
 		}
 
@@ -789,19 +891,38 @@ namespace ScreenDesigner
 
 	class NamedBitmap
 	{
-		public NamedBitmap(string name, int width, int height, string folder)
+		public NamedBitmap(string name, int width, int height, string depth)
 		{
 			Name = name;
 			Height = height;
 			Width = width;
-			Folder = folder;
+			ColorDepth = depth;
 			Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+
+			switch (depth)
+			{
+				case XmlScreen.StrColorDepth8:
+					BytesPerPixel = 1;
+					break;
+
+				case XmlScreen.StrColorDepth16:
+					BytesPerPixel = 2;
+					break;
+
+				case XmlScreen.StrColorDepth24:
+					BytesPerPixel = 3;
+					break;
+
+				default:
+					throw new Exception($"ColorDepth property of canvas '{Name}' has invalid value '{ColorDepth}'");
+			}
 		}
 		public string Name { get; protected set; }
 		public int Height { get; protected set; }
 		public int Width { get; protected set; }
-		public string Folder { get; protected set; }
-		public RenderTargetBitmap Bitmap { get; protected set; }
+		public string ColorDepth { get; protected set; }
+		public int BytesPerPixel { get; protected set; }
+		public BitmapSource Bitmap { get; set; }
 		public List<Location> Locations { get; set; }
 		public List<HotSpot> HotSpots { get; set; }
 	}
