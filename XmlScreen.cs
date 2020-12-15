@@ -180,9 +180,25 @@ namespace ScreenDesigner
 
 				line = (Line)Visual;
 				if (Double.IsNaN(line.Height))
-					line.Height = Math.Abs(line.Y2 - line.Y1) + line.StrokeThickness;
+				{
+					if (Owner.Parent.Graphic != null)
+						line.Height = Owner.Parent.Graphic.Height - Owner.Top;
+					else
+					{
+						line.Height = Math.Abs(line.Y2 - line.Y1) + line.StrokeThickness;
+						y = (int)Math.Min(line.Y1, line.Y2);
+					}
+				}
 				if (Double.IsNaN(line.Width))
-					line.Width = Math.Abs(line.X2 - line.X1) + line.StrokeThickness;
+				{
+					if (Owner.Parent.Graphic != null)
+						line.Width = Owner.Parent.Graphic.Width - Owner.Left;
+					else
+					{
+						line.Width = Math.Abs(line.X2 - line.X1) + line.StrokeThickness;
+						x = (int)Math.Min(line.X1, line.X2);
+					}
+				}
 
 				base.Draw(DrawList, x, y);
 			}
@@ -296,11 +312,20 @@ namespace ScreenDesigner
 					bmp.EndInit();
 					image = ((Image)Visual);
 					image.Source = bmp;
-					if (Double.IsNaN(image.Height))
-						image.Height = bmp.PixelHeight;
-					if (Double.IsNaN(image.Width))
-						image.Width = bmp.PixelWidth;
 				}
+			}
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				Image image;
+
+				image = ((Image)Visual);
+				if (Double.IsNaN(image.Height))
+					image.Height = ((BitmapImage)image.Source).PixelHeight;
+				if (Double.IsNaN(image.Width))
+					image.Width = ((BitmapImage)image.Source).PixelWidth;
+
+				base.Draw(DrawList, x, y);
 			}
 		}
 
