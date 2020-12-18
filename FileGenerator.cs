@@ -34,6 +34,7 @@ namespace ScreenDesigner
 		const string StrImageAddress	= "IMAGE_ADDRESS";
 		const string StrImageSize		= "IMAGE_SIZE";
 		const string StrImageWidth		= "IMAGE_WIDTH";
+		const string StrImageHeight		= "IMAGE_HEIGHT";
 		const string StrImageDepth		= "IMAGE_DEPTH";
 		const string StrEndScreen		= "END_SCREEN";
 
@@ -69,6 +70,7 @@ namespace ScreenDesigner
 				Predefine1(StrImageAddress);
 				Predefine1(StrImageSize);
 				Predefine1(StrImageWidth);
+				Predefine1(StrImageHeight);
 				Predefine1(StrImageDepth);
 				Predefine1(StrEndScreen);
 
@@ -145,6 +147,7 @@ namespace ScreenDesigner
 				Undefine(StrImageAddress);
 				Undefine(StrImageSize);
 				Undefine(StrImageWidth);
+				Undefine(StrImageHeight);
 				Undefine(StrImageDepth);
 				Undefine(StrEndScreen);
 
@@ -187,6 +190,7 @@ namespace ScreenDesigner
 				DefineValue(StrImageAddress, Offset);
 				DefineValue(StrImageSize, bitmapSize);
 				DefineValue(StrImageWidth, bmp.Width);
+				DefineValue(StrImageHeight, bmp.Height);
 				DefineValue(StrImageDepth, bmp.ColorDepth);
 				DefineHead(StrEndScreen, bmp.Name);
 
