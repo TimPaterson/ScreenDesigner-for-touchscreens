@@ -61,6 +61,7 @@ namespace ScreenDesigner
 		{
 			XDocument doc;
 			XmlScreen parser;
+			int maxWidth;
 
 			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
 
@@ -96,7 +97,10 @@ namespace ScreenDesigner
 			{
 				parser = new XmlScreen();
 				m_Images = parser.ParseXml(doc);
-				StartImageDisplay();
+				maxWidth = 0;
+				foreach (NamedBitmap bmp in m_Images)
+					maxWidth = Math.Max(maxWidth, bmp.Width);
+				StartImageDisplay(maxWidth);
 				foreach (NamedBitmap bmp in m_Images)
 					DisplayImage(bmp);
 				EndImageDisplay();
@@ -134,14 +138,17 @@ namespace ScreenDesigner
 			LoadXml(Settings.Default.XmlFileName);
 		}
 
-		void StartImageDisplay()
+		void StartImageDisplay(int maxWidth)
 		{
 			pnlImages.Children.Clear();
+			pnlImages.Width = maxWidth + GroupExtraWidth + 2;
 		}
 
 		void EndImageDisplay()
 		{
 			SizeToContent = SizeToContent.WidthAndHeight;
+			SizeToContent = SizeToContent.Manual;
+			pnlImages.Width = double.NaN;
 		}
 
 		void DisplayImage(NamedBitmap bmp)
@@ -160,14 +167,14 @@ namespace ScreenDesigner
 			border = new Border();
 			border.BorderThickness = new Thickness(1);
 			border.BorderBrush = new SolidColorBrush(Colors.Black);
-			border.Width = bmp.Width;
-			border.Height = bmp.Height;
+			border.Width = bmp.Width + 2;
+			border.Height = bmp.Height + 2;
 			border.Child = image;
 
 			group = new GroupBox();
 			group.Header = bmp.Name;
-			group.Width = bmp.Width + GroupExtraWidth;
-			group.Height = bmp.Height + GroupExtraHeight;
+			group.Width = border.Width + GroupExtraWidth;
+			group.Height = border.Height + GroupExtraHeight;
 			group.Content = border;
 			group.HorizontalAlignment = HorizontalAlignment.Left;
 

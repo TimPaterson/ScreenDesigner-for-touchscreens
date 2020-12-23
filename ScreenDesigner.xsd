@@ -6,6 +6,7 @@
   <xs:attribute name="RefName" type="xs:string"/>
   <xs:attribute name="Fill" type="xs:string"/>
   <xs:attribute name="Location" type="xs:string"/>
+  <xs:attribute name="Area" type="xs:string"/>
   <xs:attribute name="Height" type="xs:string"/>
   <xs:attribute name="Width" type="xs:string"/>
   <xs:attribute name="RowHeight" type="xs:string"/>
@@ -53,9 +54,9 @@
   <xs:element name="Project">
     <xs:complexType>
       <xs:choice minOccurs="1" maxOccurs="unbounded">
-        <xs:element ref="Component" maxOccurs="unbounded" />
         <xs:element ref="Canvas" maxOccurs="unbounded" />
-        <xs:element ref="Set" maxOccurs="unbounded" />
+        <xs:element ref="Component" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
         <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
@@ -79,6 +80,7 @@
         <xs:attribute ref="Width" use="required"/>
         <xs:attribute ref="Fill" use="required"/>
         <xs:attribute name="ColorDepth" type="BitsPerPixel" use="required"/>
+        <xs:attribute name="Type" type="xs:string"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -98,11 +100,13 @@
       <xs:extension base="Content_t">
         <xs:attribute ref="Height" use="required" />
         <xs:attribute ref="Width" use="required" />
-        <xs:attribute name="RadiusX" type="xs:string" />
-        <xs:attribute name="RadiusY" type="xs:string" />
         <xs:attribute ref="StrokeThickness" />
         <xs:attribute ref="Stroke" />
         <xs:attribute ref="Fill" />
+        <xs:attribute ref="Area" />
+        <xs:attribute name="RadiusX" type="xs:string" />
+        <xs:attribute name="RadiusY" type="xs:string" />
+        <xs:attribute name="HotSpot" type="xs:string" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -147,6 +151,7 @@
           <xs:attributeGroup ref="Element" />
           <xs:attribute ref="Height" />
           <xs:attribute ref="Width" />
+          <xs:attribute ref="Area" />
           <xs:attribute name="Text" type="xs:string" />
           <xs:attribute name="FontFamily" type="xs:string" />
           <xs:attribute name="FontWeight" type="xs:string" />
@@ -219,11 +224,16 @@
       <xs:attributeGroup ref="Element" />
       <xs:attribute ref="Height" />
       <xs:attribute ref="Width" />
+      <xs:attribute ref="Area" />
     </xs:complexType>
   </xs:element>
   
   <xs:element name="Ref">
     <xs:complexType>
+      <xs:choice minOccurs="1" maxOccurs="unbounded">
+        <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
+      </xs:choice>
       <xs:attributeGroup ref="Element" />
       <xs:attribute ref="RefName" />
     </xs:complexType>

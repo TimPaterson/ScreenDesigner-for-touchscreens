@@ -124,6 +124,18 @@ namespace ScreenDesigner
 			}
 		}
 
+		class XmlArea : XmlGraphic
+		{
+			public string Area { get; set; }
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				base.Draw(DrawList, x, y);
+				if (Area != null)
+					DrawList.Areas.Add(new Area(Area, x, y, Height, Width));
+			}
+		}
+
 		class XmlCanvas : XmlRectangle
 		{
 			string m_depth;
@@ -138,9 +150,11 @@ namespace ScreenDesigner
 					m_depth = value;
 				}
 			}
+
+			public string Type { get; set; }
 		}
 
-		class XmlRectangle : XmlGraphic
+		class XmlRectangle : XmlArea
 		{
 			public XmlRectangle()
 			{
@@ -149,6 +163,15 @@ namespace ScreenDesigner
 				shape = new Rectangle();
 				shape.StrokeThickness = 0;
 				Visual = shape;
+			}
+
+			public string HotSpot { get; set; }
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				if (!string.IsNullOrEmpty(HotSpot))
+					DrawList.HotSpots.Add(new HotSpot(HotSpot, Owner.Group, x, y, Width, Height));
+				base.Draw(DrawList, x, y);
 			}
 		}
 
@@ -204,7 +227,7 @@ namespace ScreenDesigner
 			}
 		}
 
-		class XmlTextBlock : XmlGraphic
+		class XmlTextBlock : XmlArea
 		{
 			public XmlTextBlock()
 			{
@@ -329,12 +352,10 @@ namespace ScreenDesigner
 			}
 		}
 
-		class XmlHotSpot : XmlGraphic
+		class XmlHotSpot : XmlArea
 		{
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
-				HotSpot spot;
-
 				if (Owner.Parent.Graphic != null)
 				{
 					if (Width == 0)
@@ -342,16 +363,9 @@ namespace ScreenDesigner
 					if (Height == 0)
 						Height = Owner.Parent.Graphic.Height;
 				}
-				spot = new HotSpot();
-				spot.Name = Owner.Name;
-				spot.Group = Owner.Group;
-				spot.MinX = x;
-				spot.MaxX = x + Width - 1;
-				spot.MinY = y;
-				spot.MaxY = y + Height - 1;
-				DrawList.HotSpots.Add(spot);
+				DrawList.HotSpots.Add(new HotSpot(Owner.Name, Owner.Group, x, y, Width, Height));
+				base.Draw(DrawList, x, y);
 			}
-
 		}
 
 		class XmlRef : XmlGraphic
@@ -591,8 +605,8 @@ namespace ScreenDesigner
 			}
 			public int Top { get; set; }
 			public int Left { get; set; }
-			public int Width { get { return (int)Graphic.Width; } }
-			public int Height { get { return (int)Graphic.Height; } }
+			public int Width { get { return Graphic.Width; } }
+			public int Height { get { return Graphic.Height; } }
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
@@ -754,10 +768,12 @@ namespace ScreenDesigner
 			{
 				Visual = new ContainerVisual();
 				Locations = new List<Location>();
+				Areas = new List<Area>();
 				HotSpots = new List<HotSpot>();
 			}
 			public ContainerVisual Visual { get; protected set; }
 			public List<Location> Locations { get; protected set; }
+			public List<Area> Areas { get; protected set; }
 			public List<HotSpot> HotSpots { get; protected set; }
 		}
 
@@ -830,12 +846,15 @@ namespace ScreenDesigner
 			Element el;
 			DrawResults DrawList;
 			NamedBitmap bmp;
+			XmlCanvas canvas;
 
 			el = BuildElement(node);
 			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
-			bmp = new NamedBitmap(el.Name, el.Width, el.Height, ((XmlCanvas)el.Graphic).ColorDepth);
+			canvas = (XmlCanvas)el.Graphic;
+			bmp = new NamedBitmap(el.Name, el.Width, el.Height, canvas.ColorDepth, canvas.Type);
 			bmp.Locations = DrawList.Locations;
+			bmp.Areas = DrawList.Areas;
 			bmp.HotSpots = DrawList.HotSpots;
 			((RenderTargetBitmap)bmp.Bitmap).Render(DrawList.Visual);
 			Images.Add(bmp);
@@ -904,8 +923,29 @@ namespace ScreenDesigner
 		public int Y { get; protected set; }
 	}
 
+	class Area : Location
+	{
+		public Area(string name, int x, int y, int height, int width) :
+			base(name, x, y)
+		{
+			Height = height;
+			Width = width;
+		}
+		public int Width { get; protected set; }
+		public int Height { get; protected set; }
+	}
+
 	class HotSpot
 	{
+		public HotSpot(string name, string group, int x, int y, int width, int height)
+		{
+			Name = name;
+			Group = group;
+			MinX = x;
+			MaxX = x + width - 1;
+			MinY = y;
+			MaxY = y + height - 1;
+		}
 		public string Name { get; set; }
 		public string Group { get; set; }
 		public int MinX { get; set; }
@@ -916,12 +956,13 @@ namespace ScreenDesigner
 
 	class NamedBitmap
 	{
-		public NamedBitmap(string name, int width, int height, string depth)
+		public NamedBitmap(string name, int width, int height, string depth, string type)
 		{
 			Name = name;
 			Height = height;
 			Width = width;
 			ColorDepth = depth;
+			Type = type;
 			Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
 
 			switch (depth)
@@ -946,9 +987,11 @@ namespace ScreenDesigner
 		public int Height { get; protected set; }
 		public int Width { get; protected set; }
 		public string ColorDepth { get; protected set; }
+		public string Type { get; protected set; }
 		public int BytesPerPixel { get; protected set; }
 		public BitmapSource Bitmap { get; set; }
 		public List<Location> Locations { get; set; }
+		public List<Area> Areas { get; set; }
 		public List<HotSpot> HotSpots { get; set; }
 	}
 

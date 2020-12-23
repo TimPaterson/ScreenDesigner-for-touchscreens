@@ -12,21 +12,9 @@ namespace ScreenDesigner
 	class FileGenerator
 	{
 		const string StrMacroUndef = "#undef {0}";
-		const string StrMacroPredfine1 =
+		const string StrMacroPredfine =
 @"#ifndef {0}
-#define {0}(a)
-#endif";
-		const string StrMacroPredfine2 =
-@"#ifndef {0}
-#define {0}(a,b)
-#endif";
-		const string StrMacroPredfine3 =
-@"#ifndef {0}
-#define {0}(a,b,c)
-#endif";
-		const string StrMacroPredfine6 =
-@"#ifndef {0}
-#define {0}(a,b,c,d,e,f)
+#define {0}({1})
 #endif";
 
 		// Overall screen defintion
@@ -47,16 +35,33 @@ namespace ScreenDesigner
 		const string StrLocation		= "DEFINE_LOCATION";
 		const string StrEndLocations	= "END_LOCATIONS";
 
+		const string StrStartAreas		= "START_AREAS";
+		const string StrArea			= "DEFINE_AREA";
+		const string StrEndAreas		= "END_AREAS";
+
 		const string StrStartGroup		= "START_GROUP";
 		const string StrGroupHotspot	= "GROUP_HOTSPOT";
 		const string StrEndGroup		= "END_GROUP";
 
 		const string StrFileLength		= "SCREEN_FILE_LENGTH";
 
+		class BitmapInfo
+		{
+			public BitmapInfo(NamedBitmap bmp, int offset)
+			{
+				Bmp = bmp;
+				Offset = offset;
+			}
+
+			public NamedBitmap Bmp;
+			public int Offset;
+		}
+
 		StreamWriter Writer;
 		FileStream Stream;
 		int Offset;
-		Dictionary<string, List<HotSpot>> groups;
+		Dictionary<string, List<HotSpot>> Groups;
+		Dictionary<string, List<BitmapInfo>> Types;
 
 		public void Open(string fileNameHeader, string fileNameBinary)
 		{
@@ -64,7 +69,8 @@ namespace ScreenDesigner
 			{
 				Writer = new StreamWriter(fileNameHeader);
 				Offset = 0;
-				groups = new Dictionary<string, List<HotSpot>>();
+				Groups = new Dictionary<string, List<HotSpot>>();
+				Types = new Dictionary<string, List<BitmapInfo>>();
 
 				Predefine1(StrStartScreen);
 				Predefine1(StrImageAddress);
@@ -82,6 +88,10 @@ namespace ScreenDesigner
 				Predefine1(StrStartLocations);
 				Predefine3(StrLocation);
 				Predefine1(StrEndLocations);
+
+				Predefine1(StrStartAreas);
+				Predefine5(StrArea);
+				Predefine1(StrEndAreas);
 
 				Predefine1(StrStartGroup);
 				Predefine6(StrGroupHotspot);
@@ -101,13 +111,13 @@ namespace ScreenDesigner
 			if (Writer != null)
 			{
 				// Now output them by group
-				if (groups.Count > 1)
+				if (Groups.Count > 1)
 				{
-					foreach (string group in groups.Keys)
+					foreach (string group in Groups.Keys)
 					{
 						Writer.WriteLine();
 						DefineHead(StrStartGroup, group);
-						foreach (HotSpot spot in groups[group])
+						foreach (HotSpot spot in Groups[group])
 						{
 							Writer.WriteLine("\t" + StrGroupHotspot + "({0}, {1}, {2}, {3}, {4}, {5})",
 								spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
@@ -116,7 +126,7 @@ namespace ScreenDesigner
 					}
 
 					// Do them again, but with a unique macro for each group
-					foreach (string group in groups.Keys)
+					foreach (string group in Groups.Keys)
 					{
 						Writer.WriteLine();
 						Predefine1(StrStartGroup + "_" + group);
@@ -125,7 +135,7 @@ namespace ScreenDesigner
 
 						Writer.WriteLine();
 						DefineHead(StrStartGroup + "_" + group, group);
-						foreach (HotSpot spot in groups[group])
+						foreach (HotSpot spot in Groups[group])
 						{
 							Writer.WriteLine("\t" + StrGroupHotspot + "_" + group + "({0}, {1}, {2}, {3}, {4}, {5})",
 								spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
@@ -136,6 +146,45 @@ namespace ScreenDesigner
 						Undefine(StrStartGroup + "_" + group);
 						Undefine(StrGroupHotspot + "_" + group);
 						Undefine(StrEndGroup + "_" + group);
+					}
+				}
+
+				// Now output all bitmaps that have a type
+				if (Types.Count != 0)
+				{
+					foreach (string type in Types.Keys)
+					{
+						Writer.WriteLine();
+						Predefine1(StrStartScreen + "_" + type);
+						Predefine1(StrImageAddress + "_" + type);
+						Predefine1(StrImageSize + "_" + type);
+						Predefine1(StrImageWidth + "_" + type);
+						Predefine1(StrImageHeight + "_" + type);
+						Predefine1(StrImageDepth + "_" + type);
+						Predefine1(StrEndScreen + "_" + type);
+
+						foreach (BitmapInfo info in Types[type])
+						{
+							NamedBitmap bmp = info.Bmp;
+							Writer.WriteLine();
+							DefineHead(StrStartScreen + "_" + type, bmp.Name);
+							DefineValue(StrImageAddress + "_" + type, info.Offset);
+							DefineValue(StrImageSize + "_" + type, bmp.Height * bmp.Width * bmp.BytesPerPixel);
+							DefineValue(StrImageWidth + "_" + type, bmp.Width);
+							DefineValue(StrImageHeight + "_" + type, bmp.Height);
+							DefineValue(StrImageDepth + "_" + type, bmp.ColorDepth);
+							DefineHead(StrEndScreen + "_" + type, bmp.Name);
+						}
+
+						Writer.WriteLine();
+						Undefine(StrStartScreen + "_" + type);
+						Undefine(StrImageAddress + "_" + type);
+						Undefine(StrImageSize + "_" + type);
+						Undefine(StrImageWidth + "_" + type);
+						Undefine(StrImageHeight + "_" + type);
+						Undefine(StrImageDepth + "_" + type);
+						Undefine(StrEndScreen + "_" + type);
+
 					}
 				}
 
@@ -159,6 +208,10 @@ namespace ScreenDesigner
 				Undefine(StrStartLocations);
 				Undefine(StrLocation);
 				Undefine(StrEndLocations);
+
+				Undefine(StrStartAreas);
+				Undefine(StrArea);
+				Undefine(StrEndAreas);
 
 				Undefine(StrStartGroup);
 				Undefine(StrGroupHotspot);
@@ -185,14 +238,25 @@ namespace ScreenDesigner
 
 			if (Writer != null)
 			{
-				Writer.WriteLine();
-				DefineHead(StrStartScreen, bmp.Name);
-				DefineValue(StrImageAddress, Offset);
-				DefineValue(StrImageSize, bitmapSize);
-				DefineValue(StrImageWidth, bmp.Width);
-				DefineValue(StrImageHeight, bmp.Height);
-				DefineValue(StrImageDepth, bmp.ColorDepth);
-				DefineHead(StrEndScreen, bmp.Name);
+				if (string.IsNullOrEmpty(bmp.Type))
+				{
+					Writer.WriteLine();
+					DefineHead(StrStartScreen, bmp.Name);
+					DefineValue(StrImageAddress, Offset);
+					DefineValue(StrImageSize, bitmapSize);
+					DefineValue(StrImageWidth, bmp.Width);
+					DefineValue(StrImageHeight, bmp.Height);
+					DefineValue(StrImageDepth, bmp.ColorDepth);
+					DefineHead(StrEndScreen, bmp.Name);
+				}
+				else
+				{
+					// Save up all bitmaps with type until the end
+					if (!Types.ContainsKey(bmp.Type))
+						Types.Add(bmp.Type, new List<BitmapInfo>());
+
+					Types[bmp.Type].Add(new BitmapInfo(bmp, Offset));
+				}
 
 				if (bmp.HotSpots.Count != 0)
 				{
@@ -205,10 +269,10 @@ namespace ScreenDesigner
 						if (string.IsNullOrEmpty(spot.Group))
 							spot.Group = "";    // make sure not null
 
-						if (!groups.ContainsKey(spot.Group))
-							groups.Add(spot.Group, new List<HotSpot>());
+						if (!Groups.ContainsKey(spot.Group))
+							Groups.Add(spot.Group, new List<HotSpot>());
 
-						groups[spot.Group].Add(spot);
+						Groups[spot.Group].Add(spot);
 					}
 					DefineHead(StrEndHotspots, bmp.Name);
 
@@ -223,6 +287,15 @@ namespace ScreenDesigner
 					foreach (Location loc in bmp.Locations)
 						Writer.WriteLine("\t" + StrLocation + "({0}, {1}, {2})", loc.Name, loc.X, loc.Y);
 					DefineHead(StrEndLocations, bmp.Name);
+				}
+
+				if (bmp.Areas.Count != 0)
+				{
+					Writer.WriteLine();
+					DefineHead(StrStartAreas, bmp.Name);
+					foreach (Area area in bmp.Areas)
+						Writer.WriteLine("\t" + StrArea + "({0}, {1}, {2}, {3}, {4})", area.Name, area.X, area.Y, area.Width, area.Height);
+					DefineHead(StrEndAreas, bmp.Name);
 				}
 
 				Offset += bitmapSize;
@@ -291,22 +364,27 @@ namespace ScreenDesigner
 
 		void Predefine1(string macro)
 		{
-			Writer.WriteLine(StrMacroPredfine1, macro);
+			Writer.WriteLine(StrMacroPredfine, macro, "a");
 		}
 
 		void Predefine2(string macro)
 		{
-			Writer.WriteLine(StrMacroPredfine2, macro);
+			Writer.WriteLine(StrMacroPredfine, macro, "a,b");
 		}
 
 		void Predefine3(string macro)
 		{
-			Writer.WriteLine(StrMacroPredfine3, macro);
+			Writer.WriteLine(StrMacroPredfine, macro, "a,b,c");
+		}
+
+		void Predefine5(string macro)
+		{
+			Writer.WriteLine(StrMacroPredfine, macro, "a,b,c,d,e");
 		}
 
 		void Predefine6(string macro)
 		{
-			Writer.WriteLine(StrMacroPredfine6, macro);
+			Writer.WriteLine(StrMacroPredfine, macro, "a,b,c,d,e,f");
 		}
 
 		void DefineHead(string macro, object value)
