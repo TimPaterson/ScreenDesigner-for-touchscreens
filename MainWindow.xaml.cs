@@ -24,8 +24,8 @@ namespace ScreenDesigner
 		public const string StrTitle = "Screen Designer";
 		const string StrXmlSchemaPath = @"..\..\ScreenDesigner.xsd";
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
-		const int GroupExtraHeight = 30;
-		const int GroupExtraWidth = 20;
+		const int GroupExtraHeight = 25;
+		const int GroupExtraWidth = 10;
 
 		public MainWindow()
 		{
@@ -173,10 +173,9 @@ namespace ScreenDesigner
 
 			group = new GroupBox();
 			group.Header = bmp.Name;
-			group.Width = border.Width + GroupExtraWidth;
 			group.Height = border.Height + GroupExtraHeight;
 			group.Content = border;
-			group.HorizontalAlignment = HorizontalAlignment.Left;
+			group.VerticalAlignment = VerticalAlignment.Top;
 
 			pnlImages.Children.Add(group);
 		}
