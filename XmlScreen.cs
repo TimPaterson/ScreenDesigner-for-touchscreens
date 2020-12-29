@@ -127,12 +127,18 @@ namespace ScreenDesigner
 		class XmlArea : XmlGraphic
 		{
 			public string Area { get; set; }
+			public string HotSpot { get; set; }
+			public string Group { get; set; }
 
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
-				base.Draw(DrawList, x, y);
+				if (!string.IsNullOrEmpty(HotSpot))
+					DrawList.HotSpots.Add(new HotSpot(HotSpot, Group, x, y, Width, Height));
+
 				if (Area != null)
 					DrawList.Areas.Add(new Area(Area, x, y, Height, Width));
+
+				base.Draw(DrawList, x, y);
 			}
 		}
 
@@ -163,15 +169,6 @@ namespace ScreenDesigner
 				shape = new Rectangle();
 				shape.StrokeThickness = 0;
 				Visual = shape;
-			}
-
-			public string HotSpot { get; set; }
-
-			public override void Draw(DrawResults DrawList, int x, int y)
-			{
-				if (!string.IsNullOrEmpty(HotSpot))
-					DrawList.HotSpots.Add(new HotSpot(HotSpot, Owner.Group, x, y, Width, Height));
-				base.Draw(DrawList, x, y);
 			}
 		}
 
@@ -363,7 +360,7 @@ namespace ScreenDesigner
 					if (Height == 0)
 						Height = Owner.Parent.Graphic.Height;
 				}
-				DrawList.HotSpots.Add(new HotSpot(Owner.Name, Owner.Group, x, y, Width, Height));
+				DrawList.HotSpots.Add(new HotSpot(Owner.Name, Group, x, y, Width, Height));
 				base.Draw(DrawList, x, y);
 			}
 		}
@@ -575,7 +572,6 @@ namespace ScreenDesigner
 				Type typGraphic;
 
 				Parent = parent;
-				Group = parent?.Group;
 				Children = new List<Element>();
 				if (ElementTypes.TryGetValue(type, out typGraphic))
 				{
@@ -610,7 +606,6 @@ namespace ScreenDesigner
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
-			public string Group { get; set; }
 			public string Location { get; set; }
 			public string Content
 			{
@@ -647,7 +642,6 @@ namespace ScreenDesigner
 				el.Name = Name;
 				el.Top = Top;
 				el.Left = Left;
-				el.Group = Group;
 				el.Location = Location;
 				el.Graphic = Graphic;
 				if (Graphic != null)
@@ -681,10 +675,6 @@ namespace ScreenDesigner
 
 					case "Left":
 						Left = EvalInt(value);
-						break;
-
-					case "Group":
-						Group = value;
 						break;
 
 					case "Location":

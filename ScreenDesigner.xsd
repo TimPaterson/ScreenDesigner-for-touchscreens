@@ -6,7 +6,6 @@
   <xs:attribute name="RefName" type="xs:string"/>
   <xs:attribute name="Fill" type="xs:string"/>
   <xs:attribute name="Location" type="xs:string"/>
-  <xs:attribute name="Area" type="xs:string"/>
   <xs:attribute name="Height" type="xs:string"/>
   <xs:attribute name="Width" type="xs:string"/>
   <xs:attribute name="RowHeight" type="xs:string"/>
@@ -23,8 +22,13 @@
     <xs:attribute ref="Top" />
     <xs:attribute ref="Left" />
     <xs:attribute ref="Location" />
-    <xs:attribute ref="Group" />
     <xs:attribute ref="Value" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="AreaGroup">
+    <xs:attribute name="Area" type="xs:string"/>
+    <xs:attribute name="Group" type="xs:string"/>
+    <xs:attribute name="HotSpot" type="xs:string" />
   </xs:attributeGroup>
 
   <xs:simpleType name="BitsPerPixel">
@@ -98,15 +102,14 @@
   <xs:complexType name="Rectangle_t">
     <xs:complexContent>
       <xs:extension base="Content_t">
+        <xs:attributeGroup ref="AreaGroup" />
         <xs:attribute ref="Height" use="required" />
         <xs:attribute ref="Width" use="required" />
         <xs:attribute ref="StrokeThickness" />
         <xs:attribute ref="Stroke" />
         <xs:attribute ref="Fill" />
-        <xs:attribute ref="Area" />
         <xs:attribute name="RadiusX" type="xs:string" />
         <xs:attribute name="RadiusY" type="xs:string" />
-        <xs:attribute name="HotSpot" type="xs:string" />
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
@@ -149,9 +152,9 @@
       <xs:simpleContent>
         <xs:extension base="xs:string">
           <xs:attributeGroup ref="Element" />
+          <xs:attributeGroup ref="AreaGroup" />
           <xs:attribute ref="Height" />
           <xs:attribute ref="Width" />
-          <xs:attribute ref="Area" />
           <xs:attribute name="Text" type="xs:string" />
           <xs:attribute name="FontFamily" type="xs:string" />
           <xs:attribute name="FontWeight" type="xs:string" />
@@ -222,9 +225,9 @@
   <xs:element name="HotSpot">
     <xs:complexType>
       <xs:attributeGroup ref="Element" />
+      <xs:attributeGroup ref="AreaGroup" />
       <xs:attribute ref="Height" />
       <xs:attribute ref="Width" />
-      <xs:attribute ref="Area" />
     </xs:complexType>
   </xs:element>
   
