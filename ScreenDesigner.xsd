@@ -103,6 +103,7 @@
       <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Font" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element ref="Color" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
     </xs:choice>
@@ -116,6 +117,7 @@
         <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
         <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
         <xs:element ref="Font" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="Color" minOccurs="0" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -246,6 +248,13 @@
     <xs:complexType>
       <xs:attribute ref="Name" use="required"/>
       <xs:attributeGroup ref="FontGroup" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="Color">
+    <xs:complexType>
+      <xs:attribute ref="Name" use="required"/>
+      <xs:attribute name="Color"  use="required"/>
     </xs:complexType>
   </xs:element>
 

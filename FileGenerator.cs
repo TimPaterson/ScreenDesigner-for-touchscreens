@@ -45,6 +45,8 @@ namespace ScreenDesigner
 
 		const string StrFileLength		= "SCREEN_FILE_LENGTH";
 
+		const string StrColor			= "DEFINE_COLOR";
+
 		class BitmapInfo
 		{
 			public BitmapInfo(NamedBitmap bmp, int offset)
@@ -97,6 +99,7 @@ namespace ScreenDesigner
 				Predefine6(StrGroupHotspot);
 				Predefine1(StrEndGroup);
 
+				Predefine2(StrColor);
 				Predefine1(StrFileLength);
 			}
 
@@ -217,6 +220,7 @@ namespace ScreenDesigner
 				Undefine(StrGroupHotspot);
 				Undefine(StrEndGroup);
 
+				Undefine(StrColor);
 				Undefine(StrFileLength);
 
 				Writer.Close();
@@ -307,6 +311,16 @@ namespace ScreenDesigner
 
 				arPx = ConvertColorBitmap(bmp);
 				Stream.Write(arPx, 0, arPx.Length);
+			}
+		}
+
+		public void WriteColors(List<KeyValuePair<string, int>> Colors)
+		{
+			if (Colors.Count > 0)
+			{
+				Writer.WriteLine();
+				foreach (var color in Colors)
+					DefineNamedValue(StrColor, color.Key, "0x" + color.Value.ToString("X6"));
 			}
 		}
 

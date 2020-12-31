@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -31,14 +32,14 @@ namespace ScreenDesigner
 			int m_Height;
 			int m_Width;
 
-			public virtual int Height 
-			{ 
+			public virtual int Height
+			{
 				get { return Visual == null ? m_Height : (int)Visual.Height; }
 				set { if (Visual == null) m_Height = value; else Visual.Height = value; }
 			}
 
 			public virtual int Width
-			{ 
+			{
 				get { return Visual == null ? m_Width : (int)Visual.Width; }
 				set { if (Visual == null) m_Width = value; else Visual.Width = value; }
 			}
@@ -64,7 +65,7 @@ namespace ScreenDesigner
 					prop = Visual?.GetType().GetProperty(Attr);
 					obj = Visual;
 					if (prop != null)
-						m_xmlClone = null;	// invalide cached copy
+						m_xmlClone = null;  // invalide cached copy
 				}
 
 				if (prop != null)
@@ -76,6 +77,8 @@ namespace ScreenDesigner
 					else
 						prop.SetValue(obj, Convert.ChangeType(Element.EvalInt(Value), prop.PropertyType));
 				}
+				else
+					throw new Exception($"Unknown attribute name '{Attr}'");
 			}
 
 			public virtual void Draw(DrawResults DrawList, int x, int y)
@@ -108,17 +111,26 @@ namespace ScreenDesigner
 				int val;
 				PropertyInfo prop;
 
-				try
+				if (string.IsNullOrEmpty(color))
+					throw new Exception("Color is blank.");
+
+				if (color[0] >= '0' && color[0] <= '9')
 				{
-					val = (int)new Int32Converter().ConvertFromString(color);
-					return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
-				}
-				catch (Exception exc)
-				{
-					Debug.WriteLine("Expected exception: " + exc.Message);
+					try
+					{
+						val = (int)new Int32Converter().ConvertFromString(color);
+						return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
+					}
+					catch (Exception)
+					{}
+					throw new Exception($"Invalid color value: {color}");
 				}
 
 				// Try looking it up by name
+				// First look in our local colors
+				if (Colors.TryGetValue(color, out val))
+					return Color.FromRgb((byte)(val >> 16), (byte)((val >> 8) & 0xff), (byte)(val & 0xff));
+
 				prop = typeof(Colors).GetProperty(color);
 				if (prop == null)
 					throw new Exception($"Invalid color name: {color}");
@@ -148,7 +160,7 @@ namespace ScreenDesigner
 		{
 			string m_depth;
 
-			public string ColorDepth 
+			public string ColorDepth
 			{
 				get => m_depth;
 				set
@@ -238,7 +250,7 @@ namespace ScreenDesigner
 			public override int Height { get; set; }
 			public override int Width { get; set; }
 			public string Font
-			{ 
+			{
 				set
 				{
 					XmlFont font;
@@ -290,7 +302,7 @@ namespace ScreenDesigner
 
 			public string FontWeight
 			{
-				set 
+				set
 				{
 					PropertyInfo prop;
 
@@ -304,7 +316,7 @@ namespace ScreenDesigner
 
 			public string FontStyle
 			{
-				set 
+				set
 				{
 					PropertyInfo prop;
 
@@ -318,7 +330,7 @@ namespace ScreenDesigner
 
 			public string FontStretch
 			{
-				set 
+				set
 				{
 					PropertyInfo prop;
 
@@ -410,9 +422,11 @@ namespace ScreenDesigner
 
 		class XmlSet : XmlGraphic
 		{
-			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
-			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)." + RegAssignRef;
+			const string RegExpression = "\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
+			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpression;
+			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)\." + RegAssignRef;
 
+			static Regex s_regExpression = new Regex("^" + RegExpression + "\\s*$");
 			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
 			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
 			protected static Regex s_regUnescape = new Regex(@"\\(.)");
@@ -430,7 +444,20 @@ namespace ScreenDesigner
 
 					refName = RefName;
 					if (RefName == null)
+					{
 						match = s_regAssign.Match(value);
+						if (!match.Success && Owner.Name != null && Owner.Value == null)
+						{
+							// Maybe we're using the content to set the name variable
+							match = s_regExpression.Match(value);
+							if (match.Success && match.Groups["val"].Captures.Count == 1)
+							{
+								val = s_regUnescape.Replace(match.Groups["val"].Captures[0].Value, "$1");
+								Owner.Value = val;
+								return;
+							}
+						}
+					}
 					else
 						match = s_regAssignRef.Match(value);
 
@@ -441,14 +468,14 @@ namespace ScreenDesigner
 					{
 						if (RefName == null)
 							refName = match.Groups["ref"].Captures[i].Value;
-						el = Owner.Parent.FindChild(refName);
+						el = Owner.Parent?.FindChild(refName);
 						if (el != null)
 						{
 							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
 							el.SetAttribute(match.Groups["attr"].Captures[i].Value, val);
 						}
 						else
-							throw new Exception($"Set can't find an element named '{RefName}'");
+							throw new Exception($"Set can't find an element named '{refName}'");
 					}
 				}
 			}
@@ -458,7 +485,7 @@ namespace ScreenDesigner
 		{
 			const string RegExpression = "\\s*(?<val>((\"(([^\"\\\\]|\\\\.)*)\")|([^;\"\\\\]|\\\\.)+)+)";
 			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpression;
-			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)." + RegAssignRef;
+			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)\." + RegAssignRef;
 
 			static Regex s_regExpression = new Regex("^" + RegExpression + "\\s*$");
 			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
@@ -499,14 +526,14 @@ namespace ScreenDesigner
 					{
 						if (RefName == null)
 							refName = match.Groups["ref"].Captures[i].Value;
-						el = Owner.Parent.FindChild(refName);
+						el = Owner.Parent?.FindChild(refName);
 						if (el != null)
 						{
 							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
 							el.SetAttribute(match.Groups["attr"].Captures[i].Value, Element.EvalString(val));
 						}
 						else
-							throw new Exception($"SetString can't find an element named '{RefName}'");
+							throw new Exception($"SetString can't find an element named '{refName}'");
 					}
 				}
 			}
@@ -516,7 +543,7 @@ namespace ScreenDesigner
 		{
 			public int RowHeight { get; set; }
 			public int ColumnWidth { get; set; }
-			public override void Draw(DrawResults DrawList, int x, int y) 
+			public override void Draw(DrawResults DrawList, int x, int y)
 			{
 				int iRowCur;
 
@@ -537,7 +564,7 @@ namespace ScreenDesigner
 
 		class XmlRow : XmlGraphic
 		{
-			public override void Draw(DrawResults DrawList, int x, int y) 
+			public override void Draw(DrawResults DrawList, int x, int y)
 			{
 				XmlGrid grid;
 				int iColCur;
@@ -553,7 +580,7 @@ namespace ScreenDesigner
 				foreach (Element el in Owner.Children)
 				{
 					if ((el.Graphic as XmlDefault)?.IsCopy == false)
-						continue;		// Ignore original Row default
+						continue;       // Ignore original Row default
 					el.Left += iColCur;
 					iColCur = iColWidth + el.Left;
 				}
@@ -562,7 +589,7 @@ namespace ScreenDesigner
 
 		class XmlColumn : XmlGraphic
 		{
-			public override Element Owner 
+			public override Element Owner
 			{
 				get { return base.Owner; }
 				set
@@ -611,6 +638,27 @@ namespace ScreenDesigner
 			}
 		}
 
+		class XmlColor : XmlGraphic
+		{
+			int m_color;
+
+			public string Color 
+			{ 
+				set
+				{
+					Color color;
+
+					color = ColorFromString(value);
+					m_color = (color.R << 16) | (color.G << 8) | color.B;
+				}
+			}
+
+			public override void ElementComplete()
+			{
+				Colors.Add(Owner.Name, m_color);
+			}
+		}
+
 		class Element
 		{
 			public Element(string type, Element parent)
@@ -631,9 +679,9 @@ namespace ScreenDesigner
 			#region Public Properties
 
 			public string Name { get; set; }
-			public object Value 
-			{ 
-				get => m_Value; 
+			public object Value
+			{
+				get => m_Value;
 				set
 				{
 					if (Name == null)
@@ -655,7 +703,7 @@ namespace ScreenDesigner
 			public string Location { get; set; }
 			public string Content
 			{
-				set 
+				set
 				{
 					if (Graphic != null)
 						Graphic.Content = value;
@@ -667,21 +715,22 @@ namespace ScreenDesigner
 			static readonly Dictionary<string, Type> ElementTypes = new Dictionary<string, Type>
 			{
 				{ "Rectangle",  typeof(XmlRectangle) },
-				{ "Ellipse",	typeof(XmlEllipse) },
-				{ "Line",		typeof(XmlLine) },
+				{ "Ellipse",    typeof(XmlEllipse) },
+				{ "Line",       typeof(XmlLine) },
 				{ "TextBlock",  typeof(XmlTextBlock) },
-				{ "Image",		typeof(XmlImage) },
-				{ "HotSpot",	typeof(XmlHotSpot) },
-				{ "Canvas",		typeof(XmlCanvas) },
-				{ "Ref",		typeof(XmlRef) },
-				{ "Set",		typeof(XmlSet) },
-				{ "SetString",	typeof(XmlSetString) },
+				{ "Image",      typeof(XmlImage) },
+				{ "HotSpot",    typeof(XmlHotSpot) },
+				{ "Canvas",     typeof(XmlCanvas) },
+				{ "Ref",        typeof(XmlRef) },
+				{ "Set",        typeof(XmlSet) },
+				{ "SetString",  typeof(XmlSetString) },
 				{ "Grid",       typeof(XmlGrid) },
-				{ "Row",		typeof(XmlRow) },
-				{ "Column",		typeof(XmlColumn) },
+				{ "Row",        typeof(XmlRow) },
+				{ "Column",     typeof(XmlColumn) },
 				{ "ColumnNoDefault", typeof(XmlColumnNoDefault) },
-				{ "Default",	typeof(XmlDefault) },
-				{ "Font",		typeof(XmlFont) },
+				{ "Default",    typeof(XmlDefault) },
+				{ "Font",       typeof(XmlFont) },
+				{ "Color",      typeof(XmlColor) },
 			};
 
 			public void ElementComplete()
@@ -830,6 +879,7 @@ namespace ScreenDesigner
 			Images = new List<NamedBitmap>();
 			ExprContext = new ExpressionContext();
 			Fonts = new Dictionary<string, XmlFont>();
+			Colors = new Dictionary<string, int>();
 		}
 
 		#endregion
@@ -839,6 +889,7 @@ namespace ScreenDesigner
 
 		static Dictionary<string, Element> Components;
 		static Dictionary<string, XmlFont> Fonts;
+		static Dictionary<string, int> Colors;
 		static ExpressionContext ExprContext;
 		List<NamedBitmap> Images;
 
@@ -868,6 +919,11 @@ namespace ScreenDesigner
 				}
 			}
 			return Images;
+		}
+
+		internal List<KeyValuePair<string, int>> GetColors()
+		{
+			return Colors.ToList();
 		}
 
 		#endregion
@@ -930,7 +986,7 @@ namespace ScreenDesigner
 			}
 			catch (CaughtException)
 			{
-				throw;	// already reported
+				throw;  // already reported
 			}
 			catch (Exception exc)
 			{

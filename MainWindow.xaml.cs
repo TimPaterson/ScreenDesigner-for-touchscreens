@@ -50,6 +50,7 @@ namespace ScreenDesigner
 		FileSystemWatcher m_watcher;
 		Dispatcher m_dispatcher;
 		List<NamedBitmap> m_Images;
+		List<KeyValuePair<string, int>> m_Colors;
 		Timer m_timer;
 
 		#endregion
@@ -110,6 +111,7 @@ namespace ScreenDesigner
 			{
 				parser = new XmlScreen();
 				m_Images = parser.ParseXml(doc);
+				m_Colors = parser.GetColors();
 				maxWidth = 0;
 				foreach (NamedBitmap bmp in m_Images)
 					maxWidth = Math.Max(maxWidth, bmp.Width);
@@ -345,6 +347,8 @@ namespace ScreenDesigner
 
 			path = Path.Combine(path, Path.GetFileNameWithoutExtension(Settings.Default.XmlFileName));
 			output.Open(path + ".h", path + ".bin");
+
+			output.WriteColors(m_Colors);
 
 			// Ouput each image as .bmp and associated .h file with hotspots and locations
 			foreach (NamedBitmap bmp in m_Images)
