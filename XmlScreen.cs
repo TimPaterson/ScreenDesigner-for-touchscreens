@@ -87,6 +87,8 @@ namespace ScreenDesigner
 				}
 			}
 
+			public virtual void ElementComplete() { }
+
 			public XmlGraphic Clone()
 			{
 				XmlGraphic graphic;
@@ -235,6 +237,31 @@ namespace ScreenDesigner
 
 			public override int Height { get; set; }
 			public override int Width { get; set; }
+			public string Font
+			{ 
+				set
+				{
+					XmlFont font;
+
+					if (!XmlScreen.Fonts.TryGetValue(value, out font))
+						throw new Exception($"No font named '{value}' was found.");
+
+					if (font.FontFamily != null)
+						FontFamily = font.FontFamily;
+
+					if (font.FontWeight != null)
+						FontWeight = font.FontWeight;
+
+					if (font.FontStyle != null)
+						FontStyle = font.FontStyle;
+
+					if (font.FontStretch != null)
+						FontStretch = font.FontStretch;
+
+					if (font.FontSize != 0)
+						SetAttribute("FontSize", font.FontSize.ToString());
+				}
+			}
 
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
@@ -371,7 +398,12 @@ namespace ScreenDesigner
 			{
 				set
 				{
-					XmlScreen.Components[value].CloneTo(Owner);
+					Element el;
+
+					if (XmlScreen.Components.TryGetValue(value, out el))
+						el.CloneTo(Owner);
+					else
+						throw new Exception($"No component named '{value}' was found.");
 				}
 			}
 		}
@@ -565,6 +597,20 @@ namespace ScreenDesigner
 			public bool IsCopy { get; set; }
 		}
 
+		class XmlFont : XmlGraphic
+		{
+			public string FontFamily { get; set; }
+			public string FontWeight { get; set; }
+			public string FontStyle { get; set; }
+			public string FontStretch { get; set; }
+			public int FontSize { get; set; }
+
+			public override void ElementComplete()
+			{
+				Fonts.Add(Owner.Name, this);
+			}
+		}
+
 		class Element
 		{
 			public Element(string type, Element parent)
@@ -635,7 +681,13 @@ namespace ScreenDesigner
 				{ "Column",		typeof(XmlColumn) },
 				{ "ColumnNoDefault", typeof(XmlColumnNoDefault) },
 				{ "Default",	typeof(XmlDefault) },
+				{ "Font",		typeof(XmlFont) },
 			};
+
+			public void ElementComplete()
+			{
+				Graphic?.ElementComplete();
+			}
 
 			public Element CloneTo(Element el)
 			{
@@ -777,6 +829,7 @@ namespace ScreenDesigner
 			Components = new Dictionary<string, Element>();
 			Images = new List<NamedBitmap>();
 			ExprContext = new ExpressionContext();
+			Fonts = new Dictionary<string, XmlFont>();
 		}
 
 		#endregion
@@ -785,6 +838,7 @@ namespace ScreenDesigner
 		#region Fields
 
 		static Dictionary<string, Element> Components;
+		static Dictionary<string, XmlFont> Fonts;
 		static ExpressionContext ExprContext;
 		List<NamedBitmap> Images;
 
@@ -795,7 +849,7 @@ namespace ScreenDesigner
 
 		internal List<NamedBitmap> ParseXml(XDocument xml)
 		{
-			foreach (XElement el in ((XElement)(xml.FirstNode)).Elements())
+			foreach (XElement el in ((XElement)(xml.Root)).Elements())
 			{
 				switch (el.Name.LocalName)
 				{
@@ -807,10 +861,8 @@ namespace ScreenDesigner
 						DefineCanvas(el);
 						break;
 
-					case "Set":
-					case "SetString":
-						// Don't need result element, 
-						// value is put in ExprContext
+					default:
+						// Element handles itself
 						BuildElement(el);
 						break;
 				}
@@ -868,6 +920,7 @@ namespace ScreenDesigner
 					}
 				}
 				attrError = null;
+				el.ElementComplete();
 
 				if (!string.IsNullOrEmpty(node.Value))
 					el.Content = node.Value;
@@ -883,7 +936,8 @@ namespace ScreenDesigner
 			{
 				var info = (IXmlLineInfo)node;
 				string strErr = attrError != null ? $" setting attribute '{attrError.Name.LocalName}' to '{attrError.Value}'" : "";
-				throw new CaughtException($"Error at line {info.LineNumber}{strErr}:\n{exc.Message}");
+				string msg = exc.InnerException?.Message ?? exc.Message;
+				throw new CaughtException($"Error at line {info.LineNumber}{strErr}:\n{msg}");
 			}
 			return el;
 		}

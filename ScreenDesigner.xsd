@@ -31,11 +31,63 @@
     <xs:attribute name="HotSpot" type="xs:string" />
   </xs:attributeGroup>
 
+  <xs:attributeGroup name="FontGroup">
+    <xs:attribute name="FontFamily" type="xs:string" />
+    <xs:attribute name="FontWeight" type="FontWeights" />
+    <xs:attribute name="FontStyle" type="FontStyles" />
+    <xs:attribute name="FontStretch" type="FontStretches" />
+    <xs:attribute name="FontSize" type="xs:string" />
+  </xs:attributeGroup>
+
   <xs:simpleType name="BitsPerPixel">
     <xs:restriction base="xs:string">
       <xs:enumeration value="Color8bpp" />
       <xs:enumeration value="Color16bpp" />
       <xs:enumeration value="Color24bpp" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FontStretches">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="UltraCondensed" />
+      <xs:enumeration value="ExtraCondensed" />
+      <xs:enumeration value="Condensed" />
+      <xs:enumeration value="SemiCondensed" />
+      <xs:enumeration value="Normal" />
+      <xs:enumeration value="Medium" />
+      <xs:enumeration value="SemiExpanded" />
+      <xs:enumeration value="Expanded" />
+      <xs:enumeration value="ExtraExpanded" />
+      <xs:enumeration value="UltraExpanded" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FontWeights">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Thin" />
+      <xs:enumeration value="ExtraLight" />
+      <xs:enumeration value="UltraLight" />
+      <xs:enumeration value="Light" />
+      <xs:enumeration value="Normal" />
+      <xs:enumeration value="Regular" />
+      <xs:enumeration value="Medium" />
+      <xs:enumeration value="DemiBold" />
+      <xs:enumeration value="SemiBold" />
+      <xs:enumeration value="Bold" />
+      <xs:enumeration value="ExtraBold" />
+      <xs:enumeration value="UltraBold" />
+      <xs:enumeration value="Black" />
+      <xs:enumeration value="Heavy" />
+      <xs:enumeration value="ExtraBlack" />
+      <xs:enumeration value="UltraBlack" />
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FontStyles">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="Italic" />
+      <xs:enumeration value="Normal" />
+      <xs:enumeration value="Oblique" />
     </xs:restriction>
   </xs:simpleType>
 
@@ -50,6 +102,7 @@
       <xs:element ref="Image" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
+      <xs:element ref="Font" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
     </xs:choice>
@@ -62,6 +115,7 @@
         <xs:element ref="Component" minOccurs="0" maxOccurs="unbounded" />
         <xs:element ref="Set" minOccurs="0" maxOccurs="unbounded" />
         <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
+        <xs:element ref="Font" minOccurs="0" maxOccurs="unbounded" />
       </xs:choice>
     </xs:complexType>
   </xs:element>
@@ -153,16 +207,13 @@
         <xs:extension base="xs:string">
           <xs:attributeGroup ref="Element" />
           <xs:attributeGroup ref="AreaGroup" />
+          <xs:attributeGroup ref="FontGroup" />
           <xs:attribute ref="Height" />
           <xs:attribute ref="Width" />
           <xs:attribute name="Text" type="xs:string" />
-          <xs:attribute name="FontFamily" type="xs:string" />
-          <xs:attribute name="FontWeight" type="xs:string" />
-          <xs:attribute name="FontStyle" type="xs:string" />
-          <xs:attribute name="FontStretch" type="xs:string" />
-          <xs:attribute name="FontSize" type="xs:string" />
           <xs:attribute name="Background" type="xs:string" />
           <xs:attribute name="Foreground" type="xs:string" />
+          <xs:attribute name="Font" type="xs:string" />
         </xs:extension>
       </xs:simpleContent>
     </xs:complexType>
@@ -190,6 +241,13 @@
   <xs:element name="Set" type="Set_t" />
 
   <xs:element name="SetString" type="Set_t" />
+
+  <xs:element name="Font">
+    <xs:complexType>
+      <xs:attribute ref="Name" use="required"/>
+      <xs:attributeGroup ref="FontGroup" />
+    </xs:complexType>
+  </xs:element>
 
   <xs:element name="Grid">
     <xs:complexType>

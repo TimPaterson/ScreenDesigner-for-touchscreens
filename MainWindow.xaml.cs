@@ -61,13 +61,22 @@ namespace ScreenDesigner
 		{
 			XDocument doc;
 			XmlScreen parser;
+			XmlReader reader;
+			XmlReaderSettings settings;
+			FileStream stream;
 			int maxWidth;
 
 			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
+			stream = null;
 
 			try
 			{
-				doc = XDocument.Load(strXmlFileName, LoadOptions.SetLineInfo);
+				stream = new FileStream(strXmlFileName, FileMode.Open);
+				settings = new XmlReaderSettings();
+				settings.XmlResolver = new XmlUrlResolver();
+				settings.DtdProcessing = DtdProcessing.Parse;
+				reader = XmlReader.Create(stream, settings, Path.GetDirectoryName(strXmlFileName) + '\\');
+				doc = XDocument.Load(reader, LoadOptions.SetLineInfo);
 				XmlSchemaSet schemas = new XmlSchemaSet();
 				schemas.Add(null, StrXmlSchemaPath);
 				doc.Validate(schemas, null);
@@ -91,6 +100,10 @@ namespace ScreenDesigner
 				MessageBox.Show($"Error:\n{exc.Message}", StrTitle, MessageBoxButton.OK, MessageBoxImage.Error);
 				pnlImages.Children.Clear();
 				return false;
+			}
+			finally
+			{
+				stream?.Close();
 			}
 
 			try
