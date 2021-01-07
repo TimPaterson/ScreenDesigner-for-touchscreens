@@ -16,6 +16,7 @@
   <xs:attribute name="Left" type="xs:string"/>
   <xs:attribute name="Group" type="xs:string"/>
   <xs:attribute name="Value" type="xs:string"/>
+  <xs:attribute name="ColorDepth" type="BitsPerPixel"/>
 
   <xs:attributeGroup name="Element">
     <xs:attribute ref="Name"/>
@@ -139,7 +140,7 @@
         <xs:attribute ref="Height" use="required"/>
         <xs:attribute ref="Width" use="required"/>
         <xs:attribute ref="Fill" use="required"/>
-        <xs:attribute name="ColorDepth" type="BitsPerPixel" use="required"/>
+        <xs:attribute ref="ColorDepth" use="required"/>
         <xs:attribute name="Type" type="xs:string"/>
       </xs:extension>
     </xs:complexContent>
@@ -255,6 +256,7 @@
     <xs:complexType>
       <xs:attribute ref="Name" use="required"/>
       <xs:attribute name="Color"  use="required"/>
+      <xs:attribute ref="ColorDepth"/>
     </xs:complexType>
   </xs:element>
 

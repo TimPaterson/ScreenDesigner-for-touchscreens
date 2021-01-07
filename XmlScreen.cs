@@ -15,9 +15,36 @@ using System.Windows.Shapes;
 using System.Xml;
 using System.Xml.Linq;
 using Flee.PublicTypes;
+using static ScreenDesigner.ColorOperations;
 
 namespace ScreenDesigner
 {
+	public static class ColorOperations
+	{
+		public enum BpC    // bits per color
+		{
+			// 8-bit color bit lengths
+			R8 = 3,
+			G8 = 3,
+			B8 = 2,
+
+			// 16-bit color bit lengths
+			R16 = 5,
+			G16 = 6,
+			B16 = 5
+		}
+
+		public static int LimitColor(int color, BpC bitsPerColor)
+		{
+			int bits = (int)bitsPerColor;
+
+			color += 0x80 >> bits;  // round up
+			color -= (color & 0x100) >> bits;
+			color &= (int)(0xFF00 >> bits) & 0xFF;
+			return color;
+		}
+	}
+
 	class XmlScreen
 	{
 		public const string StrColorDepth8 = "Color8bpp";
@@ -158,18 +185,7 @@ namespace ScreenDesigner
 
 		class XmlCanvas : XmlRectangle
 		{
-			string m_depth;
-
-			public string ColorDepth
-			{
-				get => m_depth;
-				set
-				{
-					if (value != StrColorDepth8 && value != StrColorDepth16 && value != StrColorDepth24)
-						throw new Exception($"ColorDepth must be one of the following string values: '{StrColorDepth8}', '{StrColorDepth16}', or '{StrColorDepth24}'.");
-					m_depth = value;
-				}
-			}
+			public string ColorDepth { get; set; }	// schema restricts values
 
 			public string Type { get; set; }
 		}
@@ -642,8 +658,10 @@ namespace ScreenDesigner
 		{
 			int m_color;
 
-			public string Color 
-			{ 
+			public string ColorDepth { get; set; }  // schema restricts values
+
+			public string Color
+			{
 				set
 				{
 					Color color;
@@ -655,6 +673,31 @@ namespace ScreenDesigner
 
 			public override void ElementComplete()
 			{
+				int r, g, b;
+
+				// Flatten color to match depth, if specified
+				if (!string.IsNullOrEmpty(ColorDepth))
+				{
+					r = m_color >> 16;
+					g = (m_color >> 8) & 0xFF;
+					b = m_color & 0xFF;
+
+					switch (ColorDepth)
+					{
+						case StrColorDepth8:
+							r = LimitColor(r, BpC.R8);
+							g = LimitColor(g, BpC.G8);
+							b = LimitColor(b, BpC.B8);
+							break;
+
+						case StrColorDepth16:
+							r = LimitColor(r, BpC.R16);
+							g = LimitColor(g, BpC.G16);
+							b = LimitColor(b, BpC.B16);
+							break;
+					}
+					m_color = (r << 16) | (g << 8) | b;
+				}
 				Colors.Add(Owner.Name, m_color);
 			}
 		}

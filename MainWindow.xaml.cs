@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
+using static ScreenDesigner.ColorOperations;
 
 namespace ScreenDesigner
 {
@@ -211,21 +212,15 @@ namespace ScreenDesigner
 				// Reduce color resolution to 3:3:2 red:green:blue
 				for (int i = 0; i < arPx32.Length; i += 4)
 				{
-					color = ((int)arPx32[i] + 0x20);   // 2 bits of blue
-					color -= (color & 0x100) >> 2;  // reduce if above 0xFF
-					color &= 0xC0;
+					color = LimitColor(arPx32[i], BpC.B8);
 					color |= (color >> 2) | (color >> 4) | (color >> 6);
 					arPx32[i] = (byte)color;
 
-					color = ((int)arPx32[i + 1] + 0x10);   // 3 bits of green
-					color -= (color & 0x100) >> 3;	// reduce if above 0xFF
-					color &= 0xE0;
+					color = LimitColor(arPx32[i + 1], BpC.G8);
 					color |= (color >> 3) | (color >> 6);
 					arPx32[i + 1] = (byte)color;
 
-					color = ((int)arPx32[i + 2] + 0x10);   // 3 bits of red
-					color -= (color & 0x100) >> 3;  // reduce if above 0xFF
-					color &= 0xE0;
+					color = LimitColor(arPx32[i + 2], BpC.R8);
 					color |= (color >> 3) | (color >> 6);
 					arPx32[i + 2] = (byte)color;
 				}
@@ -235,21 +230,15 @@ namespace ScreenDesigner
 				// Reduce color resolution to 5:6:5 red:green:blue
 				for (int i = 0; i < arPx32.Length; i += 4)
 				{
-					color = ((int)arPx32[i] + 0x04);   // 5 bits of blue
-					color -= (color & 0x100) >> 5;  // reduce if above 0xFF
-					color &= 0xF8;
+					color = LimitColor(arPx32[i], BpC.B16);
 					color |= color >> 5;
 					arPx32[i] = (byte)color;
 
-					color = ((int)arPx32[i + 1] + 0x02);   // 6 bits of green
-					color -= (color & 0x100) >> 6;  // reduce if above 0xFF
-					color &= 0xFC;
+					color = LimitColor(arPx32[i + 1], BpC.G16);
 					color |= color >> 6;
 					arPx32[i + 1] = (byte)color;
 
-					color = ((int)arPx32[i + 2] + 0x04);   // 5 bits of red
-					color -= (color & 0x100) >> 5;  // reduce if above 0xFF
-					color &= 0xF8;
+					color = LimitColor(arPx32[i + 2], BpC.R16);
 					color |= color >> 5;
 					arPx32[i + 2] = (byte)color;
 				}
