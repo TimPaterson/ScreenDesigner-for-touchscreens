@@ -76,6 +76,8 @@ namespace ScreenDesigner
 				set { }
 			}
 
+			public string Location { get; set; }
+
 			public FrameworkElement Visual { get; set; }
 			public virtual Element Owner { get; set; }
 
@@ -110,6 +112,9 @@ namespace ScreenDesigner
 
 			public virtual void Draw(DrawResults DrawList, int x, int y)
 			{
+				if (!string.IsNullOrEmpty(Location))
+					DrawList.Locations.Add(new Location(Location, x, y));
+
 				if (Visual != null)
 				{
 					Visual.Arrange(new Rect(x, y, Width, Height));
@@ -176,7 +181,7 @@ namespace ScreenDesigner
 				if (!string.IsNullOrEmpty(HotSpot))
 					DrawList.HotSpots.Add(new HotSpot(HotSpot, Group, x, y, Width, Height));
 
-				if (Area != null)
+				if (!string.IsNullOrEmpty(Area))
 					DrawList.Areas.Add(new Area(Area, x, y, Height, Width));
 
 				base.Draw(DrawList, x, y);
@@ -212,6 +217,22 @@ namespace ScreenDesigner
 				shape.StrokeThickness = 0;
 				Visual = shape;
 			}
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				if (!string.IsNullOrEmpty(Location))
+				{
+					// Use center as location. Error if not even pixel.
+					if ((Width & 1) != 0 || (Height & 1) != 0)
+						throw new Exception("Ellipse height and width must be even so center falls on an even pixel");
+					DrawList.Locations.Add(new Location(Location, x + Width / 2, y + Height / 2));
+				}
+
+				// Normal drawing
+				Visual.Arrange(new Rect(x, y, Width, Height));
+				DrawList.Visual.Children.Add(Visual);
+			}
+
 		}
 
 		class XmlLine : XmlGraphic
@@ -617,16 +638,20 @@ namespace ScreenDesigner
 					if (content.Children.Count == 0 || (content.Children[0].Graphic as XmlDefault)?.IsCopy == true)
 						content = value.Parent.Parent;  // Move up to Grid
 
-					content = content.Children[0];
-					if (content.Graphic.GetType() == typeof(XmlDefault))
+					if (content.Children.Count != 0)
 					{
-						// Default contents exists, substitute it
-						content.CloneTo(value);
-						// Mark the copy to distinguish it from user's Default
-						((XmlDefault)value.Graphic).IsCopy = true;
+						content = content.Children[0];
+						if (content.Graphic.GetType() == typeof(XmlDefault))
+						{
+							// Default contents exists, substitute it
+							content.CloneTo(value);
+							// Mark the copy to distinguish it from user's Default
+							((XmlDefault)value.Graphic).IsCopy = true;
+							return;
+						}
 					}
-					else
-						base.Owner = value;
+
+					base.Owner = value;
 				}
 			}
 		}
@@ -743,7 +768,7 @@ namespace ScreenDesigner
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
-			public string Location { get; set; }
+			public XElement Node { get; set; }
 			public string Content
 			{
 				set
@@ -786,7 +811,7 @@ namespace ScreenDesigner
 				el.Name = Name;
 				el.Top = Top;
 				el.Left = Left;
-				el.Location = Location;
+				el.Node = Node;
 				el.Graphic = Graphic;
 				if (Graphic != null)
 				{
@@ -821,10 +846,6 @@ namespace ScreenDesigner
 						Left = EvalInt(value);
 						break;
 
-					case "Location":
-						Location = value;
-						break;
-
 					case "Value":
 						Value = value;
 						break;
@@ -855,12 +876,24 @@ namespace ScreenDesigner
 			{
 				x += Left;
 				y += Top;
-				if (Location != null)
-					DrawList.Locations.Add(new Location(Location, x, y));
-				if (Graphic != null)
-					Graphic.Draw(DrawList, x, y);
-				foreach (Element el in Children)
-					el.Draw(DrawList, x, y);
+				try
+				{
+					if (Graphic != null)
+						Graphic.Draw(DrawList, x, y);
+
+					foreach (Element el in Children)
+						el.Draw(DrawList, x, y);
+				}
+				catch (CaughtException)
+				{
+					throw;  // already reported
+				}
+				catch (Exception exc)
+				{
+					var info = (IXmlLineInfo)Node;
+					string msg = exc.InnerException?.Message ?? exc.Message;
+					throw new CaughtException($"Error at line {info.LineNumber}:\n{msg}");
+				}
 			}
 
 			static public int EvalInt(string expr)
@@ -1010,6 +1043,7 @@ namespace ScreenDesigner
 			try
 			{
 				el = new Element(node.Name.LocalName, parent);
+				el.Node = node;		// for tracking error location
 				if (node.HasAttributes)
 				{
 					foreach (XAttribute attr in node.Attributes())
