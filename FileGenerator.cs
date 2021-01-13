@@ -43,6 +43,14 @@ namespace ScreenDesigner
 		const string StrGroupHotspot	= "GROUP_HOTSPOT";
 		const string StrEndGroup		= "END_GROUP";
 
+		const string StrStartValues		= "START_VALUES";
+		const string StrValue			= "DEFINE_VALUE";
+		const string StrEndValues		= "END_VALUES";
+
+		const string StrStartStringValues	= "START_STR_VALUES";
+		const string StrStringValue			= "DEFINE_STR_VALUE";
+		const string StrEndStringValues		= "END_STR_VALUES";
+
 		const string StrFileLength		= "SCREEN_FILE_LENGTH";
 
 		const string StrColor			= "DEFINE_COLOR";
@@ -98,6 +106,14 @@ namespace ScreenDesigner
 				Predefine1(StrStartGroup);
 				Predefine6(StrGroupHotspot);
 				Predefine1(StrEndGroup);
+
+				Predefine1(StrStartValues);
+				Predefine2(StrValue);
+				Predefine1(StrEndValues);
+
+				Predefine1(StrStartStringValues);
+				Predefine2(StrStringValue);
+				Predefine1(StrEndStringValues);
 
 				Predefine2(StrColor);
 				Predefine1(StrFileLength);
@@ -220,6 +236,14 @@ namespace ScreenDesigner
 				Undefine(StrGroupHotspot);
 				Undefine(StrEndGroup);
 
+				Undefine(StrStartValues);
+				Undefine(StrValue);
+				Undefine(StrEndValues);
+
+				Undefine(StrStartStringValues);
+				Undefine(StrStringValue);
+				Undefine(StrEndStringValues);
+
 				Undefine(StrColor);
 				Undefine(StrFileLength);
 
@@ -300,6 +324,30 @@ namespace ScreenDesigner
 					foreach (Area area in bmp.Areas)
 						Writer.WriteLine("\t" + StrArea + "({0}, {1}, {2}, {3}, {4})", area.Name, area.X, area.Y, area.Width, area.Height);
 					DefineHead(StrEndAreas, bmp.Name);
+				}
+
+				if (bmp.Values.Count != 0)
+				{
+					// First do numeric values
+					Writer.WriteLine();
+					DefineHead(StrStartValues, bmp.Name);
+					foreach (ShowValue val in bmp.Values)
+					{
+						if (val.Value is string)
+							continue;
+						Writer.WriteLine("\t" + StrValue + "({0}, {1})", val.Name, val.Value);
+					}
+					DefineHead(StrEndValues, bmp.Name);
+
+					// Now do string values
+					Writer.WriteLine();
+					DefineHead(StrStartStringValues, bmp.Name);
+					foreach (ShowValue val in bmp.Values)
+					{
+						if (val.Value is string)
+							Writer.WriteLine("\t" + StrStringValue + "({0}, {1})", val.Name, val.Value);
+					}
+					DefineHead(StrEndStringValues, bmp.Name);
 				}
 
 				Offset += bitmapSize;

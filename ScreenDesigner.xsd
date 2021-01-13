@@ -17,6 +17,7 @@
   <xs:attribute name="Group" type="xs:string"/>
   <xs:attribute name="Value" type="xs:string"/>
   <xs:attribute name="ColorDepth" type="BitsPerPixel"/>
+  <xs:attribute name="ShowValue" type="xs:string"/>
 
   <xs:attributeGroup name="Element">
     <xs:attribute ref="Name"/>
@@ -24,6 +25,7 @@
     <xs:attribute ref="Left" />
     <xs:attribute ref="Location" />
     <xs:attribute ref="Value" />
+    <xs:attribute ref="ShowValue"/>
   </xs:attributeGroup>
 
   <xs:attributeGroup name="AreaGroup">
@@ -237,6 +239,7 @@
         <xs:attribute ref="Name"/>
         <xs:attribute ref="Value" />
         <xs:attribute ref="RefName" />
+        <xs:attribute ref="ShowValue"/>
       </xs:extension>
     </xs:simpleContent>
   </xs:complexType>

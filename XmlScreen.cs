@@ -51,6 +51,8 @@ namespace ScreenDesigner
 		public const string StrColorDepth16 = "Color16bpp";
 		public const string StrColorDepth24 = "Color24bpp";
 
+		const int IntNoValue = int.MinValue;
+
 		#region Types
 
 		class XmlGraphic
@@ -284,6 +286,18 @@ namespace ScreenDesigner
 				Visual.VerticalAlignment = VerticalAlignment.Center;
 			}
 
+			public override Element Owner 
+			{ 
+				get => base.Owner; 
+				set
+				{
+					// We want to know if Top/Left were set
+					value.Top = IntNoValue;
+					value.Left = IntNoValue;
+					base.Owner = value;
+				}
+			}
+
 			public override int Height { get; set; }
 			public override int Width { get; set; }
 			public string Font
@@ -316,9 +330,9 @@ namespace ScreenDesigner
 			{
 				if (Owner.Parent.Graphic != null)
 				{
-					if (Width == 0 && Owner.Left == 0)
+					if (Width == 0 && Owner.Left == IntNoValue)
 						Width = Owner.Parent.Graphic.Width;
-					if (Height == 0 && Owner.Top == 0)
+					if (Height == 0 && Owner.Top == IntNoValue)
 						Height = Owner.Parent.Graphic.Height;
 				}
 				if (Width == 0 || Height == 0)
@@ -429,6 +443,9 @@ namespace ScreenDesigner
 		{
 			public override void Draw(DrawResults DrawList, int x, int y)
 			{
+				if (string.IsNullOrEmpty(Owner.Name))
+					throw new Exception("HotSpot element must have name.");
+
 				if (Owner.Parent.Graphic != null)
 				{
 					if (Width == 0)
@@ -768,6 +785,7 @@ namespace ScreenDesigner
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
+			public string ShowValue { get; set; }
 			public XElement Node { get; set; }
 			public string Content
 			{
@@ -809,8 +827,6 @@ namespace ScreenDesigner
 			public Element CloneTo(Element el)
 			{
 				el.Name = Name;
-				el.Top = Top;
-				el.Left = Left;
 				el.Node = Node;
 				el.Graphic = Graphic;
 				if (Graphic != null)
@@ -818,6 +834,8 @@ namespace ScreenDesigner
 					el.Graphic = Graphic.Clone();
 					el.Graphic.Owner = el;
 				}
+				el.Top = Top;
+				el.Left = Left;
 				el.Children.Clear();
 				foreach (Element elChild in Children)
 					el.Children.Add(elChild.Clone(el));
@@ -850,6 +868,10 @@ namespace ScreenDesigner
 						Value = value;
 						break;
 
+					case "ShowValue":
+						ShowValue = value;
+						break;
+
 					default:
 						Graphic?.SetAttribute(attr, value);
 						break;
@@ -874,8 +896,21 @@ namespace ScreenDesigner
 
 			public void Draw(DrawResults DrawList, int x, int y)
 			{
-				x += Left;
-				y += Top;
+				string name;
+
+				// Record value if requested
+				name = ShowValue;
+				if (name != null)
+				{
+					if (name == string.Empty)
+						name = Name;
+					DrawList.Values.Add(new ShowValue(name, m_Value));
+				}
+
+				// IntNoValue is used only by TextBlock to know if 
+				// Left or Top has been set.
+				x += Left == IntNoValue ? 0 : Left;
+				y += Top == IntNoValue ? 0 : Top;
 				try
 				{
 					if (Graphic != null)
@@ -937,11 +972,13 @@ namespace ScreenDesigner
 				Locations = new List<Location>();
 				Areas = new List<Area>();
 				HotSpots = new List<HotSpot>();
+				Values = new List<ShowValue>();
 			}
 			public ContainerVisual Visual { get; protected set; }
 			public List<Location> Locations { get; protected set; }
 			public List<Area> Areas { get; protected set; }
 			public List<HotSpot> HotSpots { get; protected set; }
+			public List<ShowValue> Values { get; protected set; }
 		}
 
 		#endregion
@@ -1030,6 +1067,7 @@ namespace ScreenDesigner
 			bmp.Locations = DrawList.Locations;
 			bmp.Areas = DrawList.Areas;
 			bmp.HotSpots = DrawList.HotSpots;
+			bmp.Values = DrawList.Values;
 			((RenderTargetBitmap)bmp.Bitmap).Render(DrawList.Visual);
 			Images.Add(bmp);
 		}
@@ -1131,6 +1169,17 @@ namespace ScreenDesigner
 		public int MaxY { get; set; }
 	}
 
+	class ShowValue
+	{
+		public ShowValue(string name, object value)
+		{
+			Name = name;
+			Value = value;
+		}
+		public string Name { get; set; }
+		public object Value { get; set; }
+	}
+
 	class NamedBitmap
 	{
 		public NamedBitmap(string name, int width, int height, string depth, string type)
@@ -1170,6 +1219,7 @@ namespace ScreenDesigner
 		public List<Location> Locations { get; set; }
 		public List<Area> Areas { get; set; }
 		public List<HotSpot> HotSpots { get; set; }
+		public List<ShowValue> Values { get; set; }
 	}
 
 	#endregion
