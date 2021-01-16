@@ -26,7 +26,7 @@ namespace ScreenDesigner
 		const string StrXmlSchemaPath = @"..\..\ScreenDesigner.xsd";
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
 		const int GroupExtraHeight = 25;
-		const int GroupExtraWidth = 10;
+		const int GroupExtraWidth = 12;
 
 		public MainWindow()
 		{
@@ -199,7 +199,6 @@ namespace ScreenDesigner
 		void CondenseColors(NamedBitmap bmp)
 		{
 			byte[] arPx32;
-			int color;
 
 			if (bmp.BytesPerPixel == 3)
 				return;
@@ -212,17 +211,9 @@ namespace ScreenDesigner
 				// Reduce color resolution to 3:3:2 red:green:blue
 				for (int i = 0; i < arPx32.Length; i += 4)
 				{
-					color = LimitColor(arPx32[i], BpC.B8);
-					color |= (color >> 2) | (color >> 4) | (color >> 6);
-					arPx32[i] = (byte)color;
-
-					color = LimitColor(arPx32[i + 1], BpC.G8);
-					color |= (color >> 3) | (color >> 6);
-					arPx32[i + 1] = (byte)color;
-
-					color = LimitColor(arPx32[i + 2], BpC.R8);
-					color |= (color >> 3) | (color >> 6);
-					arPx32[i + 2] = (byte)color;
+					arPx32[i] = LimitColor(arPx32[i], BpC.B8);
+					arPx32[i + 1] = LimitColor(arPx32[i + 1], BpC.G8);
+					arPx32[i + 2] = LimitColor(arPx32[i + 2], BpC.R8);
 				}
 			}
 			else
@@ -230,17 +221,9 @@ namespace ScreenDesigner
 				// Reduce color resolution to 5:6:5 red:green:blue
 				for (int i = 0; i < arPx32.Length; i += 4)
 				{
-					color = LimitColor(arPx32[i], BpC.B16);
-					color |= color >> 5;
-					arPx32[i] = (byte)color;
-
-					color = LimitColor(arPx32[i + 1], BpC.G16);
-					color |= color >> 6;
-					arPx32[i + 1] = (byte)color;
-
-					color = LimitColor(arPx32[i + 2], BpC.R16);
-					color |= color >> 5;
-					arPx32[i + 2] = (byte)color;
+					arPx32[i] = LimitColor(arPx32[i], BpC.B16);
+					arPx32[i + 1] = LimitColor(arPx32[i + 1], BpC.G16);
+					arPx32[i + 2] = LimitColor(arPx32[i + 2], BpC.R16);
 				}
 			}
 			bmp.Bitmap = BitmapSource.Create(bmp.Width, bmp.Height, 96, 96, PixelFormats.Pbgra32, null, arPx32, bmp.Width * 4);

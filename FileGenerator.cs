@@ -286,27 +286,24 @@ namespace ScreenDesigner
 					Types[bmp.Type].Add(new BitmapInfo(bmp, Offset));
 				}
 
-				if (bmp.HotSpots.Count != 0)
+				Writer.WriteLine();
+				DefineHead(StrStartHotspots, bmp.Name);
+				foreach (HotSpot spot in bmp.HotSpots)
 				{
-					Writer.WriteLine();
-					DefineHead(StrStartHotspots, bmp.Name);
-					foreach (HotSpot spot in bmp.HotSpots)
-					{
-						Writer.WriteLine("\t" + StrHotspot + "({0}, {1}, {2}, {3}, {4}, {5})",
-							spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
-						if (string.IsNullOrEmpty(spot.Group))
-							spot.Group = "";    // make sure not null
+					Writer.WriteLine("\t" + StrHotspot + "({0}, {1}, {2}, {3}, {4}, {5})",
+						spot.Name, spot.Group, spot.MinX, spot.MinY, spot.MaxX, spot.MaxY);
+					if (string.IsNullOrEmpty(spot.Group))
+						spot.Group = "";    // make sure not null
 
-						if (!Groups.ContainsKey(spot.Group))
-							Groups.Add(spot.Group, new List<HotSpot>());
+					if (!Groups.ContainsKey(spot.Group))
+						Groups.Add(spot.Group, new List<HotSpot>());
 
-						Groups[spot.Group].Add(spot);
-					}
-					DefineHead(StrEndHotspots, bmp.Name);
-
-					Writer.WriteLine();
-					DefineNamedValue(StrCountHotSpots, bmp.Name, bmp.HotSpots.Count);
+					Groups[spot.Group].Add(spot);
 				}
+				DefineHead(StrEndHotspots, bmp.Name);
+
+				Writer.WriteLine();
+				DefineNamedValue(StrCountHotSpots, bmp.Name, bmp.HotSpots.Count);
 
 				if (bmp.Locations.Count != 0)
 				{

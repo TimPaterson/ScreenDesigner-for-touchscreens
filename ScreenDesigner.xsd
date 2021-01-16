@@ -40,6 +40,7 @@
     <xs:attribute name="FontStyle" type="FontStyles" />
     <xs:attribute name="FontStretch" type="FontStretches" />
     <xs:attribute name="FontSize" type="xs:string" />
+    <xs:attribute name="Font" type="xs:string" />
   </xs:attributeGroup>
 
   <xs:simpleType name="BitsPerPixel">
@@ -218,7 +219,6 @@
           <xs:attribute name="Text" type="xs:string" />
           <xs:attribute name="Background" type="xs:string" />
           <xs:attribute name="Foreground" type="xs:string" />
-          <xs:attribute name="Font" type="xs:string" />
         </xs:extension>
       </xs:simpleContent>
     </xs:complexType>
@@ -258,7 +258,7 @@
   <xs:element name="Color">
     <xs:complexType>
       <xs:attribute ref="Name" use="required"/>
-      <xs:attribute name="Color"  use="required"/>
+      <xs:attribute name="Color" use="required"/>
       <xs:attribute ref="ColorDepth"/>
     </xs:complexType>
   </xs:element>

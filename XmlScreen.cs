@@ -34,14 +34,23 @@ namespace ScreenDesigner
 			B16 = 5
 		}
 
-		public static int LimitColor(int color, BpC bitsPerColor)
+		public static byte LimitColor(int color, BpC bitsPerColor)
 		{
+			int colorCur;
 			int bits = (int)bitsPerColor;
 
-			color += 0x80 >> bits;  // round up
-			color -= (color & 0x100) >> bits;
+			// Only keep the top bits in the byte
 			color &= (int)(0xFF00 >> bits) & 0xFF;
-			return color;
+
+			// Repeat upper color bits through lower bits
+			for (colorCur = color; ; )
+			{
+				colorCur >>= bits;
+				if (colorCur == 0)
+					break;
+				color |= colorCur;
+			}
+			return (byte)color;
 		}
 	}
 
@@ -690,9 +699,35 @@ namespace ScreenDesigner
 			public string FontStretch { get; set; }
 			public int FontSize { get; set; }
 
+			public string Font
+			{
+				set
+				{
+					XmlFont font;
+
+					if (!XmlScreen.Fonts.TryGetValue(value, out font))
+						throw new Exception($"No font named '{value}' was found.");
+
+					if (font.FontFamily != null)
+						FontFamily = font.FontFamily;
+
+					if (font.FontWeight != null)
+						FontWeight = font.FontWeight;
+
+					if (font.FontStyle != null)
+						FontStyle = font.FontStyle;
+
+					if (font.FontStretch != null)
+						FontStretch = font.FontStretch;
+
+					if (font.FontSize != 0)
+						FontSize = font.FontSize;
+				}
+			}
+
 			public override void ElementComplete()
 			{
-				Fonts.Add(Owner.Name, this);
+				Fonts[Owner.Name] = this;	// add new or replace existing
 			}
 		}
 
@@ -740,7 +775,7 @@ namespace ScreenDesigner
 					}
 					m_color = (r << 16) | (g << 8) | b;
 				}
-				Colors.Add(Owner.Name, m_color);
+				Colors[Owner.Name] = m_color;	// will add new or replace existing
 			}
 		}
 
