@@ -69,6 +69,7 @@ namespace ScreenDesigner
 			int maxWidth;
 
 			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
+			txtSaved.Visibility = Visibility.Hidden;
 			stream = null;
 
 			try
@@ -327,6 +328,7 @@ namespace ScreenDesigner
 				output.WriteImage(bmp);
 
 			output.Close();
+			txtSaved.Visibility = Visibility.Visible;
 		}
 
 		private void btnBrowse_Click(object sender, RoutedEventArgs e)

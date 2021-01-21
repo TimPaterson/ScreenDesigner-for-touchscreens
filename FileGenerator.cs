@@ -23,6 +23,7 @@ namespace ScreenDesigner
 		const string StrImageSize		= "IMAGE_SIZE";
 		const string StrImageWidth		= "IMAGE_WIDTH";
 		const string StrImageHeight		= "IMAGE_HEIGHT";
+		const string StrImageStride		= "IMAGE_STRIDE";
 		const string StrImageDepth		= "IMAGE_DEPTH";
 		const string StrEndScreen		= "END_SCREEN";
 
@@ -87,6 +88,7 @@ namespace ScreenDesigner
 				Predefine1(StrImageSize);
 				Predefine1(StrImageWidth);
 				Predefine1(StrImageHeight);
+				Predefine1(StrImageStride);
 				Predefine1(StrImageDepth);
 				Predefine1(StrEndScreen);
 
@@ -179,6 +181,7 @@ namespace ScreenDesigner
 						Predefine1(StrImageSize + "_" + type);
 						Predefine1(StrImageWidth + "_" + type);
 						Predefine1(StrImageHeight + "_" + type);
+						Predefine1(StrImageStride + "_" + type);
 						Predefine1(StrImageDepth + "_" + type);
 						Predefine1(StrEndScreen + "_" + type);
 
@@ -188,9 +191,10 @@ namespace ScreenDesigner
 							Writer.WriteLine();
 							DefineHead(StrStartScreen + "_" + type, bmp.Name);
 							DefineValue(StrImageAddress + "_" + type, info.Offset);
-							DefineValue(StrImageSize + "_" + type, bmp.Height * bmp.Width * bmp.BytesPerPixel);
+							DefineValue(StrImageSize + "_" + type, bmp.Height * bmp.Stride * bmp.BytesPerPixel);
 							DefineValue(StrImageWidth + "_" + type, bmp.Width);
 							DefineValue(StrImageHeight + "_" + type, bmp.Height);
+							DefineValue(StrImageStride + "_" + type, bmp.Stride);
 							DefineValue(StrImageDepth + "_" + type, bmp.ColorDepth);
 							DefineHead(StrEndScreen + "_" + type, bmp.Name);
 						}
@@ -201,6 +205,7 @@ namespace ScreenDesigner
 						Undefine(StrImageSize + "_" + type);
 						Undefine(StrImageWidth + "_" + type);
 						Undefine(StrImageHeight + "_" + type);
+						Undefine(StrImageStride + "_" + type);
 						Undefine(StrImageDepth + "_" + type);
 						Undefine(StrEndScreen + "_" + type);
 
@@ -216,6 +221,7 @@ namespace ScreenDesigner
 				Undefine(StrImageSize);
 				Undefine(StrImageWidth);
 				Undefine(StrImageHeight);
+				Undefine(StrImageStride);
 				Undefine(StrImageDepth);
 				Undefine(StrEndScreen);
 
@@ -262,7 +268,7 @@ namespace ScreenDesigner
 		{
 			int bitmapSize;
 
-			bitmapSize = bmp.Height * bmp.Width * bmp.BytesPerPixel;
+			bitmapSize = bmp.Height * bmp.Stride * bmp.BytesPerPixel;
 
 			if (Writer != null)
 			{
@@ -274,6 +280,7 @@ namespace ScreenDesigner
 					DefineValue(StrImageSize, bitmapSize);
 					DefineValue(StrImageWidth, bmp.Width);
 					DefineValue(StrImageHeight, bmp.Height);
+					DefineValue(StrImageStride, bmp.Stride);
 					DefineValue(StrImageDepth, bmp.ColorDepth);
 					DefineHead(StrEndScreen, bmp.Name);
 				}
@@ -375,10 +382,10 @@ namespace ScreenDesigner
 			int size;
 			int pixel;
 
-			size = bmp.Height * bmp.Width;
+			size = bmp.Height * bmp.Stride;
 			arPx = new byte[size * bmp.BytesPerPixel];
 			arPx32 = new byte[size * 4];
-			bmp.Bitmap.CopyPixels(arPx32, bmp.Width * 4, 0);
+			bmp.Bitmap.CopyPixels(arPx32, bmp.Stride * 4, 0);
 
 			switch (bmp.BytesPerPixel)
 			{

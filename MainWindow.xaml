@@ -10,6 +10,7 @@
 		<Button x:Name="btnLoadXml" Content="Load XML..." HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" Width="71" Click="btnLoadXml_Click"/>
 		<Button x:Name="btnSave" Content="Save Bitmap" HorizontalAlignment="Left" Margin="106,10,0,0" VerticalAlignment="Top" Width="76" Click="btnSave_Click"/>
 		<Button x:Name="btnBrowse" Content="..." HorizontalAlignment="Left" Margin="182,10,0,0" VerticalAlignment="Top" Click="btnBrowse_Click"/>
+		<TextBlock x:Name="txtSaved" HorizontalAlignment="Left" Margin="216,12,0,0" TextWrapping="Wrap" Text="Saved" VerticalAlignment="Top" Foreground="Red" Visibility="Hidden"/>
 		<WrapPanel x:Name="pnlImages" Margin="10,35,10,10">
 		</WrapPanel>
 	</Grid>

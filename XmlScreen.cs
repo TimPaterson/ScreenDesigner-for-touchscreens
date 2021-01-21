@@ -68,7 +68,7 @@ namespace ScreenDesigner
 		{
 			string m_xmlClone;
 			int m_Height;
-			int m_Width;
+			protected int m_Width;
 
 			public virtual int Height
 			{
@@ -204,6 +204,25 @@ namespace ScreenDesigner
 			public string ColorDepth { get; set; }	// schema restricts values
 
 			public string Type { get; set; }
+			public int StrideMultiple { get; set; } = XmlScreen.StrideMultiple;
+			public int WidthMultiple { get; set; } = XmlScreen.WidthMultiple;
+			public override int Width
+			{
+				// Width is field, stride is in the Visual. Round them up
+				// as requested.
+				get => m_Width;
+				set
+				{
+					m_Width = (value + WidthMultiple - 1) & ~(WidthMultiple - 1); 
+					Visual.Width = (m_Width + StrideMultiple - 1) & ~(StrideMultiple - 1); 
+				}
+			}
+
+			public override void ElementComplete()
+			{
+				Width = m_Width;	// set it again in case WidthMultiple changed
+				base.ElementComplete();
+			}
 		}
 
 		class XmlRectangle : XmlArea
@@ -1039,6 +1058,8 @@ namespace ScreenDesigner
 		static Dictionary<string, XmlFont> Fonts;
 		static Dictionary<string, int> Colors;
 		static ExpressionContext ExprContext;
+		static int StrideMultiple = 1;
+		static int WidthMultiple = 1;
 		List<NamedBitmap> Images;
 
 		#endregion
@@ -1048,7 +1069,29 @@ namespace ScreenDesigner
 
 		internal List<NamedBitmap> ParseXml(XDocument xml)
 		{
-			foreach (XElement el in ((XElement)(xml.Root)).Elements())
+			XElement node = (XElement)xml.Root;
+
+			// Look for attributes on root node
+			if (node.HasAttributes)
+			{
+				foreach (XAttribute attr in node.Attributes())
+				{
+					switch (attr.Name.LocalName)
+					{
+						case "StrideMultiple":
+							StrideMultiple = int.Parse(attr.Value);
+							break;
+
+						case "WidthMultiple":
+							WidthMultiple = int.Parse(attr.Value);
+							break;
+
+						// Additional top-level attributes go here
+					}
+				}
+			}
+
+			foreach (XElement el in node.Elements())
 			{
 				switch (el.Name.LocalName)
 				{
@@ -1098,7 +1141,7 @@ namespace ScreenDesigner
 			DrawList = new DrawResults();
 			el.Draw(DrawList, 0, 0);
 			canvas = (XmlCanvas)el.Graphic;
-			bmp = new NamedBitmap(el.Name, el.Width, el.Height, canvas.ColorDepth, canvas.Type);
+			bmp = new NamedBitmap(el.Name, el.Width, el.Height, (int)canvas.Visual.Width, canvas.ColorDepth, canvas.Type);
 			bmp.Locations = DrawList.Locations;
 			bmp.Areas = DrawList.Areas;
 			bmp.HotSpots = DrawList.HotSpots;
@@ -1217,11 +1260,12 @@ namespace ScreenDesigner
 
 	class NamedBitmap
 	{
-		public NamedBitmap(string name, int width, int height, string depth, string type)
+		public NamedBitmap(string name, int width, int height, int stride, string depth, string type)
 		{
 			Name = name;
 			Height = height;
 			Width = width;
+			Stride = stride;
 			ColorDepth = depth;
 			Type = type;
 			Bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
@@ -1247,6 +1291,7 @@ namespace ScreenDesigner
 		public string Name { get; protected set; }
 		public int Height { get; protected set; }
 		public int Width { get; protected set; }
+		public int Stride { get; protected set; }
 		public string ColorDepth { get; protected set; }
 		public string Type { get; protected set; }
 		public int BytesPerPixel { get; protected set; }
