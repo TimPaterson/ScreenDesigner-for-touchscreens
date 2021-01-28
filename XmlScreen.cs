@@ -73,13 +73,31 @@ namespace ScreenDesigner
 			public virtual int Height
 			{
 				get { return Visual == null ? m_Height : (int)Visual.Height; }
-				set { if (Visual == null) m_Height = value; else Visual.Height = value; }
+				set 
+				{ 
+					if (Visual == null) 
+						m_Height = value; 
+					else
+					{
+						Visual.Height = value;
+						m_xmlClone = null;
+					}
+				}
 			}
 
 			public virtual int Width
 			{
 				get { return Visual == null ? m_Width : (int)Visual.Width; }
-				set { if (Visual == null) m_Width = value; else Visual.Width = value; }
+				set 
+				{ 
+					if (Visual == null) 
+						m_Width = value; 
+					else
+					{
+						Visual.Width = value; 
+						m_xmlClone = null;
+					}
+				}
 			}
 
 			public virtual string Content

@@ -163,9 +163,14 @@ namespace ScreenDesigner
 
 		void EndImageDisplay()
 		{
+			double maxHeight;
+
+			maxHeight = Height;
 			SizeToContent = SizeToContent.WidthAndHeight;
 			SizeToContent = SizeToContent.Manual;
 			pnlImages.Width = double.NaN;
+			if (Height > maxHeight)
+				Height = maxHeight;
 		}
 
 		void DisplayImage(NamedBitmap bmp)
