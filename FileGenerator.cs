@@ -109,13 +109,13 @@ namespace ScreenDesigner
 				Predefine6(StrGroupHotspot);
 				Predefine1(StrEndGroup);
 
-				Predefine1(StrStartValues);
+				Predefine0(StrStartValues);
 				Predefine2(StrValue);
-				Predefine1(StrEndValues);
+				Predefine0(StrEndValues);
 
-				Predefine1(StrStartStringValues);
+				Predefine0(StrStartStringValues);
 				Predefine2(StrStringValue);
-				Predefine1(StrEndStringValues);
+				Predefine0(StrEndStringValues);
 
 				Predefine2(StrColor);
 				Predefine1(StrFileLength);
@@ -330,30 +330,6 @@ namespace ScreenDesigner
 					DefineHead(StrEndAreas, bmp.Name);
 				}
 
-				if (bmp.Values.Count != 0)
-				{
-					// First do numeric values
-					Writer.WriteLine();
-					DefineHead(StrStartValues, bmp.Name);
-					foreach (ShowValue val in bmp.Values)
-					{
-						if (val.Value is string)
-							continue;
-						Writer.WriteLine("\t" + StrValue + "({0}, {1})", val.Name, val.Value);
-					}
-					DefineHead(StrEndValues, bmp.Name);
-
-					// Now do string values
-					Writer.WriteLine();
-					DefineHead(StrStartStringValues, bmp.Name);
-					foreach (ShowValue val in bmp.Values)
-					{
-						if (val.Value is string)
-							Writer.WriteLine("\t" + StrStringValue + "({0}, {1})", val.Name, val.Value);
-					}
-					DefineHead(StrEndStringValues, bmp.Name);
-				}
-
 				Offset += bitmapSize;
 			}
 
@@ -373,6 +349,33 @@ namespace ScreenDesigner
 				Writer.WriteLine();
 				foreach (var color in Colors)
 					DefineNamedValue(StrColor, color.Key, "0x" + color.Value.ToString("X6"));
+			}
+		}
+
+		public void WriteValues(List<ShowValue> Values)
+		{
+			if (Values.Count > 0)
+			{
+				// First do numeric values
+				Writer.WriteLine();
+				DefineHead(StrStartValues, "");
+				foreach (ShowValue val in Values)
+				{
+					if (val.Value is string)
+						continue;
+					Writer.WriteLine("\t" + StrValue + "({0}, {1})", val.Name, val.Value);
+				}
+				DefineHead(StrEndValues, "");
+
+				// Now do string values
+				Writer.WriteLine();
+				DefineHead(StrStartStringValues, "");
+				foreach (ShowValue val in Values)
+				{
+					if (val.Value is string)
+						Writer.WriteLine("\t" + StrStringValue + "({0}, {1})", val.Name, val.Value);
+				}
+				DefineHead(StrEndStringValues, "");
 			}
 		}
 
@@ -426,6 +429,11 @@ namespace ScreenDesigner
 			}
 
 			return arPx;
+		}
+
+		void Predefine0(string macro)
+		{
+			Writer.WriteLine(StrMacroPredfine, macro, "");
 		}
 
 		void Predefine1(string macro)

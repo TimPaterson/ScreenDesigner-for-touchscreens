@@ -15,7 +15,6 @@
   <xs:attribute name="Top" type="xs:string"/>
   <xs:attribute name="Left" type="xs:string"/>
   <xs:attribute name="Group" type="xs:string"/>
-  <xs:attribute name="Value" type="xs:string"/>
   <xs:attribute name="ColorDepth" type="BitsPerPixel"/>
   <xs:attribute name="ShowValue" type="xs:string"/>
   <xs:attribute name="StrideMultiple" type="Multiple"/>
@@ -26,7 +25,6 @@
     <xs:attribute ref="Top" />
     <xs:attribute ref="Left" />
     <xs:attribute ref="Location" />
-    <xs:attribute ref="Value" />
     <xs:attribute ref="ShowValue"/>
   </xs:attributeGroup>
 
@@ -243,6 +241,7 @@
   <xs:element name="Image">
     <xs:complexType>
       <xs:attributeGroup ref="Element" />
+      <xs:attributeGroup ref="AreaGroup" />
       <xs:attribute name="Source" type="xs:string" use="required" />
       <xs:attribute ref="Height" />
       <xs:attribute ref="Width" />
@@ -252,9 +251,6 @@
   <xs:complexType name="Set_t">
     <xs:simpleContent>
       <xs:extension base="xs:string">
-        <xs:attribute ref="Name"/>
-        <xs:attribute ref="Value" />
-        <xs:attribute ref="RefName" />
         <xs:attribute ref="ShowValue"/>
       </xs:extension>
     </xs:simpleContent>

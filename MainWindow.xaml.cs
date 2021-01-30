@@ -52,6 +52,7 @@ namespace ScreenDesigner
 		Dispatcher m_dispatcher;
 		List<NamedBitmap> m_Images;
 		List<KeyValuePair<string, int>> m_Colors;
+		List<ShowValue> m_Values;
 		Timer m_timer;
 
 		#endregion
@@ -67,6 +68,7 @@ namespace ScreenDesigner
 			XmlReaderSettings settings;
 			FileStream stream;
 			int maxWidth;
+			string strFolder;
 
 			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
 			txtSaved.Visibility = Visibility.Hidden;
@@ -78,7 +80,8 @@ namespace ScreenDesigner
 				settings = new XmlReaderSettings();
 				settings.XmlResolver = new XmlUrlResolver();
 				settings.DtdProcessing = DtdProcessing.Parse;
-				reader = XmlReader.Create(stream, settings, Path.GetDirectoryName(strXmlFileName) + '\\');
+				strFolder = Path.GetDirectoryName(strXmlFileName) + '\\';
+				reader = XmlReader.Create(stream, settings, strFolder);
 				doc = XDocument.Load(reader, LoadOptions.SetLineInfo);
 				XmlSchemaSet schemas = new XmlSchemaSet();
 				schemas.Add(null, StrXmlSchemaPath);
@@ -112,8 +115,9 @@ namespace ScreenDesigner
 			try
 			{
 				parser = new XmlScreen();
-				m_Images = parser.ParseXml(doc);
+				m_Images = parser.ParseXml(doc, strFolder);
 				m_Colors = parser.GetColors();
+				m_Values = parser.GetValues();
 				maxWidth = 0;
 				foreach (NamedBitmap bmp in m_Images)
 					maxWidth = Math.Max(maxWidth, bmp.Width);
@@ -327,6 +331,7 @@ namespace ScreenDesigner
 			output.Open(path + ".h", path + ".bin");
 
 			output.WriteColors(m_Colors);
+			output.WriteValues(m_Values);
 
 			// Ouput each image as .bmp and associated .h file with hotspots and locations
 			foreach (NamedBitmap bmp in m_Images)

@@ -73,31 +73,13 @@ namespace ScreenDesigner
 			public virtual int Height
 			{
 				get { return Visual == null ? m_Height : (int)Visual.Height; }
-				set 
-				{ 
-					if (Visual == null) 
-						m_Height = value; 
-					else
-					{
-						Visual.Height = value;
-						m_xmlClone = null;
-					}
-				}
+				set { if (Visual == null) m_Height = value; else Visual.Height = value; }
 			}
 
 			public virtual int Width
 			{
 				get { return Visual == null ? m_Width : (int)Visual.Width; }
-				set 
-				{ 
-					if (Visual == null) 
-						m_Width = value; 
-					else
-					{
-						Visual.Width = value; 
-						m_xmlClone = null;
-					}
-				}
+				set { if (Visual == null) m_Width = value; else Visual.Width = value; }
 			}
 
 			public virtual string Content
@@ -122,8 +104,6 @@ namespace ScreenDesigner
 				{
 					prop = Visual?.GetType().GetProperty(Attr);
 					obj = Visual;
-					if (prop != null)
-						m_xmlClone = null;  // invalide cached copy
 				}
 
 				if (prop != null)
@@ -134,6 +114,8 @@ namespace ScreenDesigner
 						prop.SetValue(obj, new SolidColorBrush(ColorFromString(Value)));
 					else
 						prop.SetValue(obj, Convert.ChangeType(Element.EvalInt(Value), prop.PropertyType));
+
+					m_xmlClone = null;  // invalide cached copy
 				}
 				else
 					throw new Exception($"Unknown attribute name '{Attr}'");
@@ -461,10 +443,17 @@ namespace ScreenDesigner
 				{
 					BitmapImage bmp;
 					Image image;
+					string fileName;
+
+					if (string.IsNullOrEmpty(value))
+						return;
+
+					fileName = System.IO.Path.Combine(SourceFolder, value);
+					fileName = System.IO.Path.GetFullPath(fileName);
 
 					bmp = new BitmapImage();
 					bmp.BeginInit();
-					bmp.UriSource = new Uri(value, UriKind.RelativeOrAbsolute);
+					bmp.UriSource = new Uri(fileName, UriKind.Absolute);
 					bmp.EndInit();
 					image = ((Image)Visual);
 					image.Source = bmp;
@@ -476,10 +465,13 @@ namespace ScreenDesigner
 				Image image;
 
 				image = ((Image)Visual);
+				if (image.Source == null)
+					return;
+
 				if (Double.IsNaN(image.Height))
-					image.Height = ((BitmapImage)image.Source).PixelHeight;
+					image.Height = ((BitmapSource)image.Source).PixelHeight;
 				if (Double.IsNaN(image.Width))
-					image.Width = ((BitmapImage)image.Source).PixelWidth;
+					image.Width = ((BitmapSource)image.Source).PixelWidth;
 
 				base.Draw(DrawList, x, y);
 			}
@@ -522,57 +514,73 @@ namespace ScreenDesigner
 
 		class XmlSet : XmlGraphic
 		{
-			const string RegExpression = "\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
-			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpression;
-			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)\." + RegAssignRef;
+			const string RegExpressionInt = "\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
+			const string RegExpressionStr = "\\s*(?<val>((\"(([^\"\\\\]|\\\\.)*)\")|([^;\"\\\\]|\\\\.)+)+)";
+			const string RegAssignInt = "(((?<ref>[a-zA-Z0-9_$]+)\\.)|(?<ref>.{0}))(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpressionInt;
+			const string RegAssignStr = "(((?<ref>[a-zA-Z0-9_$]+)\\.)|(?<ref>.{0}))(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpressionStr;
 
-			static Regex s_regExpression = new Regex("^" + RegExpression + "\\s*$");
-			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
-			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
+			static Regex s_regExpressionInt = new Regex("^" + RegExpressionInt + "\\s*$");
+			static Regex s_regExpressionStr = new Regex("^" + RegExpressionStr + "\\s*$");
+			static Regex s_regAssignInt = new Regex(@"^\s*" + RegAssignInt + @"(\s*;\s*" + RegAssignInt + @")*\s*;?\s*$");
+			static Regex s_regAssignStr = new Regex(@"^\s*" + RegAssignStr + @"(\s*;\s*" + RegAssignStr + @")*\s*;?\s*$");
+
 			protected static Regex s_regUnescape = new Regex(@"\\(.)");
 
-			public string RefName { get; set; }
+			public string ShowValue { get; set; }
 
 			public override string Content
 			{
-				set
-				{
-					Match match;
-					Element el;
-					string refName;
-					string val;
+				set => Eval(value, false);
+			}
 
-					refName = RefName;
-					if (RefName == null)
+			protected void Eval(string val, bool fIsString = false)
+			{
+				Match match;
+				Element el;
+				string refName;
+				string attrName;
+
+				if (ShowValue != null)
+				{
+					match = fIsString ? s_regExpressionStr.Match(val) : s_regExpressionInt.Match(val);
+					if (match.Success && match.Groups["val"].Captures.Count == 1)
 					{
-						match = s_regAssign.Match(value);
-						if (!match.Success && Owner.Name != null && Owner.Value == null)
+						val = s_regUnescape.Replace(match.Groups["val"].Captures[0].Value, "$1");
+						Values.Add(new ShowValue(ShowValue, fIsString ? (object)Element.EvalString(val) : (object)Element.EvalInt(val)));
+						return;
+					}
+					throw new Exception($"Invalid Set expression: '{val}'");
+				}
+
+				match = fIsString ? s_regAssignStr.Match(val) : s_regAssignInt.Match(val);
+				if (!match.Success)
+					throw new Exception($"Invalid Set expression: '{val}'");
+
+				for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
+				{
+					refName = match.Groups["ref"].Captures[i].Value;
+					attrName = match.Groups["attr"].Captures[i].Value;
+					val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
+
+					if (string.IsNullOrEmpty(refName))
+					{
+						// Assigning a variable
+						try
 						{
-							// Maybe we're using the content to set the name variable
-							match = s_regExpression.Match(value);
-							if (match.Success && match.Groups["val"].Captures.Count == 1)
-							{
-								val = s_regUnescape.Replace(match.Groups["val"].Captures[0].Value, "$1");
-								Owner.Value = val;
-								return;
-							}
+							ExprContext.Variables[attrName] = fIsString ? (object)Element.EvalString(val) : (object)Element.EvalInt(val);
+						}
+						catch (Exception exc)
+						{
+							throw new Exception($"Error assigning to variable '{refName}':\n{exc.Message}");
 						}
 					}
 					else
-						match = s_regAssignRef.Match(value);
-
-					if (!match.Success)
-						throw new Exception($"Invalid Set expression: '{value}'");
-
-					for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
 					{
-						if (RefName == null)
-							refName = match.Groups["ref"].Captures[i].Value;
+						// Assigning a property
 						el = Owner.Parent?.FindChild(refName);
 						if (el != null)
 						{
-							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
-							el.SetAttribute(match.Groups["attr"].Captures[i].Value, val);
+							el.SetAttribute(attrName, fIsString ? Element.EvalString(val) : val);
 						}
 						else
 							throw new Exception($"Set can't find an element named '{refName}'");
@@ -583,59 +591,9 @@ namespace ScreenDesigner
 
 		class XmlSetString : XmlSet
 		{
-			const string RegExpression = "\\s*(?<val>((\"(([^\"\\\\]|\\\\.)*)\")|([^;\"\\\\]|\\\\.)+)+)";
-			const string RegAssignRef = "(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpression;
-			const string RegAssign = @"(?<ref>[a-zA-Z0-9_$]+)\." + RegAssignRef;
-
-			static Regex s_regExpression = new Regex("^" + RegExpression + "\\s*$");
-			static Regex s_regAssignRef = new Regex(@"^\s*" + RegAssignRef + @"(\s*;\s*" + RegAssignRef + @")*\s*;?\s*$");
-			static Regex s_regAssign = new Regex(@"^\s*" + RegAssign + @"(\s*;\s*" + RegAssign + @")*\s*;?\s*$");
-
 			public override string Content
 			{
-				set
-				{
-					Match match;
-					Element el;
-					string refName;
-					string val;
-
-					refName = RefName;
-					if (RefName == null)
-					{
-						match = s_regAssign.Match(value);
-						if (!match.Success && Owner.Name != null && Owner.Value == null)
-						{
-							// Maybe we're using the content to set the name variable
-							match = s_regExpression.Match(value);
-							if (match.Success && match.Groups["val"].Captures.Count == 1)
-							{
-								val = s_regUnescape.Replace(match.Groups["val"].Captures[0].Value, "$1");
-								Owner.Value = Element.EvalString(val);
-								return;
-							}
-						}
-					}
-					else
-						match = s_regAssignRef.Match(value);
-
-					if (!match.Success)
-						throw new Exception($"Invalid SetString expression: '{value}'");
-
-					for (int i = 0; i < match.Groups["attr"].Captures.Count; i++)
-					{
-						if (RefName == null)
-							refName = match.Groups["ref"].Captures[i].Value;
-						el = Owner.Parent?.FindChild(refName);
-						if (el != null)
-						{
-							val = s_regUnescape.Replace(match.Groups["val"].Captures[i].Value, "$1");
-							el.SetAttribute(match.Groups["attr"].Captures[i].Value, Element.EvalString(val));
-						}
-						else
-							throw new Exception($"SetString can't find an element named '{refName}'");
-					}
-				}
+				set => Eval(value, true);
 			}
 		}
 
@@ -831,25 +789,9 @@ namespace ScreenDesigner
 				}
 			}
 
-			object m_Value;
-
 			#region Public Properties
 
 			public string Name { get; set; }
-			public object Value
-			{
-				get => m_Value;
-				set
-				{
-					if (Name == null)
-						throw new Exception("Name property must be set before setting Value.");
-					if (!(Graphic is XmlSetString))
-						m_Value = EvalInt((string)value);
-					else
-						m_Value = value;
-					ExprContext.Variables[Name] = m_Value;
-				}
-			}
 			public int Top { get; set; }
 			public int Left { get; set; }
 			public int Width { get { return Graphic.Width; } }
@@ -857,7 +799,6 @@ namespace ScreenDesigner
 			public List<Element> Children { get; protected set; }
 			public XmlGraphic Graphic { get; set; }
 			public Element Parent { get; set; }
-			public string ShowValue { get; set; }
 			public XElement Node { get; set; }
 			public string Content
 			{
@@ -936,14 +877,6 @@ namespace ScreenDesigner
 						Left = EvalInt(value);
 						break;
 
-					case "Value":
-						Value = value;
-						break;
-
-					case "ShowValue":
-						ShowValue = value;
-						break;
-
 					default:
 						Graphic?.SetAttribute(attr, value);
 						break;
@@ -968,17 +901,6 @@ namespace ScreenDesigner
 
 			public void Draw(DrawResults DrawList, int x, int y)
 			{
-				string name;
-
-				// Record value if requested
-				name = ShowValue;
-				if (name != null)
-				{
-					if (name == string.Empty)
-						name = Name;
-					DrawList.Values.Add(new ShowValue(name, m_Value));
-				}
-
 				// IntNoValue is used only by TextBlock to know if 
 				// Left or Top has been set.
 				x += Left == IntNoValue ? 0 : Left;
@@ -1015,7 +937,7 @@ namespace ScreenDesigner
 				}
 				catch
 				{
-					throw new Exception("Error attempting to evaluate expression");
+					throw new Exception($"Error attempting to evaluate expression: '{expr}'");
 				}
 				return i;
 			}
@@ -1030,7 +952,7 @@ namespace ScreenDesigner
 				}
 				catch
 				{
-					throw new Exception("Error attempting to evaluate expression");
+					throw new Exception($"Error attempting to evaluate expression: '{expr}'");
 				}
 				return str;
 			}
@@ -1044,13 +966,11 @@ namespace ScreenDesigner
 				Locations = new List<Location>();
 				Areas = new List<Area>();
 				HotSpots = new List<HotSpot>();
-				Values = new List<ShowValue>();
 			}
 			public ContainerVisual Visual { get; protected set; }
 			public List<Location> Locations { get; protected set; }
 			public List<Area> Areas { get; protected set; }
 			public List<HotSpot> HotSpots { get; protected set; }
-			public List<ShowValue> Values { get; protected set; }
 		}
 
 		#endregion
@@ -1065,6 +985,9 @@ namespace ScreenDesigner
 			ExprContext = new ExpressionContext();
 			Fonts = new Dictionary<string, XmlFont>();
 			Colors = new Dictionary<string, int>();
+			Values = new List<ShowValue>();
+			StrideMultiple = 1;
+			WidthMultiple = 1;
 		}
 
 		#endregion
@@ -1076,8 +999,10 @@ namespace ScreenDesigner
 		static Dictionary<string, XmlFont> Fonts;
 		static Dictionary<string, int> Colors;
 		static ExpressionContext ExprContext;
-		static int StrideMultiple = 1;
-		static int WidthMultiple = 1;
+		static List<ShowValue> Values;
+		static int StrideMultiple;
+		static int WidthMultiple;
+		static string SourceFolder;
 		List<NamedBitmap> Images;
 
 		#endregion
@@ -1085,9 +1010,10 @@ namespace ScreenDesigner
 
 		#region Public Methods
 
-		internal List<NamedBitmap> ParseXml(XDocument xml)
+		internal List<NamedBitmap> ParseXml(XDocument xml, string strFolder)
 		{
 			XElement node = (XElement)xml.Root;
+			SourceFolder = strFolder;
 
 			// Look for attributes on root node
 			if (node.HasAttributes)
@@ -1135,6 +1061,11 @@ namespace ScreenDesigner
 			return Colors.ToList();
 		}
 
+		internal List<ShowValue> GetValues()
+		{
+			return Values;
+		}
+
 		#endregion
 
 
@@ -1163,7 +1094,6 @@ namespace ScreenDesigner
 			bmp.Locations = DrawList.Locations;
 			bmp.Areas = DrawList.Areas;
 			bmp.HotSpots = DrawList.HotSpots;
-			bmp.Values = DrawList.Values;
 			((RenderTargetBitmap)bmp.Bitmap).Render(DrawList.Visual);
 			Images.Add(bmp);
 		}
@@ -1317,7 +1247,6 @@ namespace ScreenDesigner
 		public List<Location> Locations { get; set; }
 		public List<Area> Areas { get; set; }
 		public List<HotSpot> HotSpots { get; set; }
-		public List<ShowValue> Values { get; set; }
 	}
 
 	#endregion
