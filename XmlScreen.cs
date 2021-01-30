@@ -206,9 +206,10 @@ namespace ScreenDesigner
 			public string Type { get; set; }
 			public int StrideMultiple { get; set; } = XmlScreen.StrideMultiple;
 			public int WidthMultiple { get; set; } = XmlScreen.WidthMultiple;
+			public int ItemWidth { get; set; }
 			public override int Width
 			{
-				// Width is field, stride is in the Visual. Round them up
+				// Width is a field, stride is in the Visual. Round them up
 				// as requested.
 				get => m_Width;
 				set
@@ -220,8 +221,45 @@ namespace ScreenDesigner
 
 			public override void ElementComplete()
 			{
+				if (Width != 0 && ItemWidth != 0)
+					throw new Exception("Only one of 'Width' or 'ItemWidth' attributes can be set.");
+				if (Width == 0 && ItemWidth == 0)
+					throw new Exception("One of 'Width' or 'ItemWidth' attributes must be set.");
 				Width = m_Width;	// set it again in case WidthMultiple changed
 				base.ElementComplete();
+			}
+
+			public override void Draw(DrawResults DrawList, int x, int y)
+			{
+				int iLeftCur;
+
+				// Verify we have valid contents
+				// Update position of each item
+				iLeftCur = 0;
+				foreach (Element el in Owner.Children)
+				{
+					if (el.Graphic as XmlItem != null)
+					{
+						el.Left += iLeftCur;
+						iLeftCur += ItemWidth;
+					}
+					else if (ItemWidth != 0)
+						throw new Exception("Canvas can only contain 'Item' elements when 'ItemWidth' attribute is set.");
+				}
+
+				if (iLeftCur != 0)
+					Width = iLeftCur;
+
+				base.Draw(DrawList, x, y);
+			}
+		}
+
+		class XmlItem : XmlGraphic
+		{
+			public override void ElementComplete()
+			{
+				if (((XmlCanvas)Owner.Parent.Graphic).ItemWidth == 0)
+					throw new Exception("'ItemWidth' attribute must be set on Canvas to use 'Item' element.");
 			}
 		}
 
@@ -830,6 +868,7 @@ namespace ScreenDesigner
 				{ "Default",    typeof(XmlDefault) },
 				{ "Font",       typeof(XmlFont) },
 				{ "Color",      typeof(XmlColor) },
+				{ "Item",		typeof(XmlItem) },
 			};
 
 			public void ElementComplete()

@@ -151,18 +151,24 @@
   <xs:complexType name="Canvas_t">
     <xs:complexContent>
       <xs:extension base="TopContent_t">
+        <xs:sequence>
+          <xs:element ref="Item" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
         <xs:attribute ref="Name" use="required"/>
         <xs:attribute ref="Height" use="required"/>
-        <xs:attribute ref="Width" use="required"/>
+        <xs:attribute ref="Width"/>
         <xs:attribute ref="StrideMultiple"/>
         <xs:attribute ref="WidthMultiple"/>
         <xs:attribute ref="Fill" use="required"/>
         <xs:attribute ref="ColorDepth" use="required"/>
         <xs:attribute name="Type" type="xs:string"/>
+        <xs:attribute name="ItemWidth" type="xs:string"/>
       </xs:extension>
     </xs:complexContent>
   </xs:complexType>
 
+  <xs:element name="Item" type="Content_t" />
+  
   <xs:element name="Canvas" type="Canvas_t" />
 
   <xs:complexType name="Content_t">
