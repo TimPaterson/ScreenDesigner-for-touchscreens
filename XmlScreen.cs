@@ -574,7 +574,6 @@ namespace ScreenDesigner
 			protected void Eval(string val, bool fIsString = false)
 			{
 				Match match;
-				Element el;
 				string refName;
 				string attrName;
 
@@ -614,13 +613,20 @@ namespace ScreenDesigner
 					}
 					else
 					{
-						// Assigning a property
-						el = Owner.Parent?.FindChild(refName);
-						if (el != null)
+						// Assigning a property. Assign to all occurrences.
+						bool fFound = false;
+						if (Owner.Parent != null)
 						{
-							el.SetAttribute(attrName, fIsString ? Element.EvalString(val) : val);
+							foreach (Element el in Owner.Parent.AllChildren())
+							{
+								if (el.Name == refName)
+								{
+									el.SetAttribute(attrName, fIsString ? Element.EvalString(val) : val);
+									fFound = true;
+								}
+							}
 						}
-						else
+						if (!fFound)
 							throw new Exception($"Set can't find an element named '{refName}'");
 					}
 				}
@@ -922,20 +928,15 @@ namespace ScreenDesigner
 				}
 			}
 
-			public Element FindChild(string name)
+			public IEnumerable<Element> AllChildren()
 			{
-				Element el;
-
-				foreach (Element elChild in Children)
+				foreach (Element el in Children)
 				{
-					if (elChild.Name == name)
-						return elChild;
+					yield return el;
 
-					el = elChild.FindChild(name);
-					if (el != null)
-						return el;
+					foreach (Element elChild in el.AllChildren())
+						yield return elChild;
 				}
-				return null;
 			}
 
 			public void Draw(DrawResults DrawList, int x, int y)
