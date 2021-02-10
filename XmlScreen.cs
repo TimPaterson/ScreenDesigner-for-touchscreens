@@ -515,25 +515,6 @@ namespace ScreenDesigner
 			}
 		}
 
-		class XmlHotSpot : XmlArea
-		{
-			public override void Draw(DrawResults DrawList, int x, int y)
-			{
-				if (string.IsNullOrEmpty(Owner.Name))
-					throw new Exception("HotSpot element must have name.");
-
-				if (Owner.Parent.Graphic != null)
-				{
-					if (Width == 0)
-						Width = Owner.Parent.Graphic.Width;
-					if (Height == 0)
-						Height = Owner.Parent.Graphic.Height;
-				}
-				DrawList.HotSpots.Add(new HotSpot(Owner.Name, Group, x, y, Width, Height));
-				base.Draw(DrawList, x, y);
-			}
-		}
-
 		class XmlRef : XmlGraphic
 		{
 			public string RefName
@@ -862,7 +843,6 @@ namespace ScreenDesigner
 				{ "Line",       typeof(XmlLine) },
 				{ "TextBlock",  typeof(XmlTextBlock) },
 				{ "Image",      typeof(XmlImage) },
-				{ "HotSpot",    typeof(XmlHotSpot) },
 				{ "Canvas",     typeof(XmlCanvas) },
 				{ "Ref",        typeof(XmlRef) },
 				{ "Set",        typeof(XmlSet) },

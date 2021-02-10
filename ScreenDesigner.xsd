@@ -119,7 +119,6 @@
       <xs:element ref="Font" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Color" minOccurs="0" maxOccurs="unbounded" />
       <xs:element ref="Ref" minOccurs="0" maxOccurs="unbounded" />
-      <xs:element ref="HotSpot" minOccurs="0" maxOccurs="unbounded" />
     </xs:choice>
   </xs:complexType>
 
@@ -311,15 +310,6 @@
   <xs:element name="ColumnNoDefault" type="Content_t" />
   
   <xs:element name="Default" type="Content_t" />
-  
-  <xs:element name="HotSpot">
-    <xs:complexType>
-      <xs:attributeGroup ref="Element" />
-      <xs:attributeGroup ref="AreaGroup" />
-      <xs:attribute ref="Height" />
-      <xs:attribute ref="Width" />
-    </xs:complexType>
-  </xs:element>
   
   <xs:element name="Ref">
     <xs:complexType>
