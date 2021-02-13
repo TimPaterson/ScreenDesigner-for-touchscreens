@@ -28,6 +28,11 @@ namespace ScreenDesigner
 		const int GroupExtraHeight = 25;
 		const int GroupExtraWidth = 12;
 
+		const string StrIsSaved = "Saved";
+		const string StrIsNotSaved = "Not Saved";
+		static Brush SavedColor = new SolidColorBrush(Colors.Green);
+		static Brush NotSavedColor = new SolidColorBrush(Colors.Red);
+
 		public MainWindow()
 		{
 			InitializeComponent();
@@ -60,6 +65,20 @@ namespace ScreenDesigner
 
 		#region Private Methods
 
+		void SetSaved(bool fIsSaved)
+		{
+			if (fIsSaved)
+			{
+				txtSaved.Text = StrIsSaved;
+				txtSaved.Foreground = SavedColor;
+			}
+			else
+			{
+				txtSaved.Text = StrIsNotSaved;
+				txtSaved.Foreground = NotSavedColor;
+			}
+		}
+
 		bool LoadXml(string strXmlFileName)
 		{
 			XDocument doc;
@@ -71,7 +90,7 @@ namespace ScreenDesigner
 			string strFolder;
 
 			Title = StrTitle + " - " + Path.GetFileName(strXmlFileName);
-			txtSaved.Visibility = Visibility.Hidden;
+			SetSaved(false);
 			stream = null;
 
 			try
@@ -125,6 +144,9 @@ namespace ScreenDesigner
 				foreach (NamedBitmap bmp in m_Images)
 					DisplayImage(bmp);
 				EndImageDisplay();
+
+				if (chkAutoSave.IsChecked == true)
+					GenerateOutput();
 			}
 			catch (CaughtException exc)
 			{
@@ -157,6 +179,32 @@ namespace ScreenDesigner
 		void LoadXmlDefault()
 		{
 			LoadXml(Settings.Default.XmlFileName);
+		}
+
+		void GenerateOutput()
+		{
+			FileGenerator output;
+			string path;
+
+			output = new FileGenerator();
+
+			if (Settings.Default.OutputFileFolder != null)
+				path = Settings.Default.OutputFileFolder;
+			else
+				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
+
+			path = Path.Combine(path, Path.GetFileNameWithoutExtension(Settings.Default.XmlFileName));
+			output.Open(path + ".h", path + ".bin");
+
+			output.WriteColors(m_Colors);
+			output.WriteValues(m_Values);
+
+			// Ouput each image as .bmp and associated .h file with hotspots and locations
+			foreach (NamedBitmap bmp in m_Images)
+				output.WriteImage(bmp);
+
+			output.Close();
+			SetSaved(true);
 		}
 
 		void StartImageDisplay(int maxWidth)
@@ -283,12 +331,14 @@ namespace ScreenDesigner
 
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
+			chkAutoSave.IsChecked = Settings.Default.AutoSave;
 			LoadNewFile(Settings.Default.XmlFileName);
 		}
 
 		private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
 		{
 			Settings.Default.MainWindowPlacement = this.GetPlacement();
+			Settings.Default.AutoSave = chkAutoSave.IsChecked == true;
 			Settings.Default.Save();
 		}
 
@@ -308,6 +358,7 @@ namespace ScreenDesigner
 
 			if (dlg.ShowDialog(this) == true)
 			{
+				chkAutoSave.IsChecked = false;
 				if (!LoadNewFile(dlg.FileName))
 				{
 					// UNDONE: file error
@@ -317,28 +368,7 @@ namespace ScreenDesigner
 
 		private void btnSave_Click(object sender, RoutedEventArgs e)
 		{
-			FileGenerator output;
-			string path;
-
-			output = new FileGenerator();
-
-			if (Settings.Default.OutputFileFolder != null)
-				path = Settings.Default.OutputFileFolder;
-			else
-				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
-
-			path = Path.Combine(path, Path.GetFileNameWithoutExtension(Settings.Default.XmlFileName));
-			output.Open(path + ".h", path + ".bin");
-
-			output.WriteColors(m_Colors);
-			output.WriteValues(m_Values);
-
-			// Ouput each image as .bmp and associated .h file with hotspots and locations
-			foreach (NamedBitmap bmp in m_Images)
-				output.WriteImage(bmp);
-
-			output.Close();
-			txtSaved.Visibility = Visibility.Visible;
+			GenerateOutput();
 		}
 
 		private void btnBrowse_Click(object sender, RoutedEventArgs e)

@@ -84,10 +84,7 @@ namespace ScreenDesigner
 		void Measure()
 		{
 			if (!m_TextBlock.IsMeasureValid)
-			{
 				m_TextBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
-				Debug.WriteLine("Measuring text");
-			}
 		}
 	}
 
@@ -172,7 +169,7 @@ namespace ScreenDesigner
 
 			public virtual void ElementComplete() { }
 
-			public XmlGraphic Clone()
+			public virtual XmlGraphic Clone()
 			{
 				XmlGraphic graphic;
 
@@ -401,6 +398,16 @@ namespace ScreenDesigner
 					ExprContext.Variables[Owner.Name] = new TextSize((TextBlock)Visual);
 
 				base.ElementComplete();
+			}
+
+			public override XmlGraphic Clone()
+			{
+				XmlGraphic graphic;
+
+				graphic = base.Clone();
+				if (!string.IsNullOrEmpty(graphic.Owner.Name))
+					ExprContext.Variables[graphic.Owner.Name] = new TextSize((TextBlock)graphic.Visual);
+				return graphic;
 			}
 
 			public override int Height { get; set; }
