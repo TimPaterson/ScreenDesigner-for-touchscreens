@@ -53,6 +53,43 @@ namespace ScreenDesigner
 			return (byte)color;
 		}
 	}
+	
+	public class TextSize
+	{
+		TextBlock m_TextBlock;
+
+		public TextSize(TextBlock text)
+		{
+			m_TextBlock = text;
+		}
+
+		public int Height
+		{
+			get
+			{
+				Measure();
+				return (int)(m_TextBlock.DesiredSize.Height + 0.9);
+			}
+		}
+
+		public int Width
+		{
+			get
+			{
+				Measure();
+				return (int)(m_TextBlock.DesiredSize.Width + 0.9);
+			}
+		}
+
+		void Measure()
+		{
+			if (!m_TextBlock.IsMeasureValid)
+			{
+				m_TextBlock.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+				Debug.WriteLine("Measuring text");
+			}
+		}
+	}
 
 	class XmlScreen
 	{
@@ -260,6 +297,7 @@ namespace ScreenDesigner
 			{
 				if (((XmlCanvas)Owner.Parent.Graphic).ItemWidth == 0)
 					throw new Exception("'ItemWidth' attribute must be set on Canvas to use 'Item' element.");
+				base.ElementComplete();
 			}
 		}
 
@@ -275,7 +313,7 @@ namespace ScreenDesigner
 			}
 		}
 
-		class XmlEllipse : XmlGraphic
+		class XmlEllipse : XmlArea
 		{
 			public XmlEllipse()
 			{
@@ -294,11 +332,10 @@ namespace ScreenDesigner
 					if ((Width & 1) != 0 || (Height & 1) != 0)
 						throw new Exception("Ellipse height and width must be even so center falls on an even pixel");
 					DrawList.Locations.Add(new Location(Location, x + Width / 2, y + Height / 2));
+					Location = null;	// Don't report in base class
 				}
 
-				// Normal drawing
-				Visual.Arrange(new Rect(x, y, Width, Height));
-				DrawList.Visual.Children.Add(Visual);
+				base.Draw(DrawList, x, y);
 			}
 
 		}
@@ -320,23 +357,17 @@ namespace ScreenDesigner
 				line = (Line)Visual;
 				if (Double.IsNaN(line.Height))
 				{
-					if (Owner.Parent.Graphic != null)
+					if (Owner.Parent.Graphic != null && Owner.Parent.Graphic.Height != 0)
 						line.Height = Owner.Parent.Graphic.Height - Owner.Top;
 					else
-					{
-						line.Height = Math.Abs(line.Y2 - line.Y1) + line.StrokeThickness;
-						y = (int)Math.Min(line.Y1, line.Y2);
-					}
+						line.Height = Math.Max(line.Y2, line.Y1) + line.StrokeThickness;
 				}
 				if (Double.IsNaN(line.Width))
 				{
-					if (Owner.Parent.Graphic != null)
+					if (Owner.Parent.Graphic != null && Owner.Parent.Graphic.Width != 0)
 						line.Width = Owner.Parent.Graphic.Width - Owner.Left;
 					else
-					{
-						line.Width = Math.Abs(line.X2 - line.X1) + line.StrokeThickness;
-						x = (int)Math.Min(line.X1, line.X2);
-					}
+						line.Width = Math.Max(line.X2, line.X1) + line.StrokeThickness;
 				}
 
 				base.Draw(DrawList, x, y);
@@ -362,6 +393,14 @@ namespace ScreenDesigner
 					value.Left = IntNoValue;
 					base.Owner = value;
 				}
+			}
+
+			public override void ElementComplete()
+			{
+				if (!string.IsNullOrEmpty(Owner.Name))
+					ExprContext.Variables[Owner.Name] = new TextSize((TextBlock)Visual);
+
+				base.ElementComplete();
 			}
 
 			public override int Height { get; set; }
@@ -589,7 +628,7 @@ namespace ScreenDesigner
 						}
 						catch (Exception exc)
 						{
-							throw new Exception($"Error assigning to variable '{refName}':\n{exc.Message}");
+							throw new Exception($"Error assigning to variable '{attrName}':\n{exc.Message}");
 						}
 					}
 					else
@@ -747,7 +786,8 @@ namespace ScreenDesigner
 
 			public override void ElementComplete()
 			{
-				Fonts[Owner.Name] = this;	// add new or replace existing
+				Fonts[Owner.Name] = this;   // add new or replace existing
+				base.ElementComplete();
 			}
 		}
 
@@ -795,7 +835,8 @@ namespace ScreenDesigner
 					}
 					m_color = (r << 16) | (g << 8) | b;
 				}
-				Colors[Owner.Name] = m_color;	// will add new or replace existing
+				Colors[Owner.Name] = m_color;   // will add new or replace existing
+				base.ElementComplete();
 			}
 		}
 

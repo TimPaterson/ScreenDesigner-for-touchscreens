@@ -198,6 +198,7 @@
   <xs:complexType name="Ellipse_t">
     <xs:complexContent>
       <xs:extension base="Content_t">
+        <xs:attributeGroup ref="AreaGroup" />
         <xs:attribute ref="Height" use="required" />
         <xs:attribute ref="Width" use="required" />
         <xs:attribute ref="StrokeThickness" />
