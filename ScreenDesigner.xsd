@@ -25,7 +25,6 @@
     <xs:attribute ref="Top" />
     <xs:attribute ref="Left" />
     <xs:attribute ref="Location" />
-    <xs:attribute ref="ShowValue"/>
   </xs:attributeGroup>
 
   <xs:attributeGroup name="AreaGroup">
@@ -319,7 +318,7 @@
         <xs:element ref="SetString" minOccurs="0" maxOccurs="unbounded" />
       </xs:choice>
       <xs:attributeGroup ref="Element" />
-      <xs:attribute ref="RefName" />
+      <xs:attribute ref="RefName" use="required"/>
     </xs:complexType>
   </xs:element>
   

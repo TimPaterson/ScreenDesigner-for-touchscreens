@@ -283,6 +283,8 @@ namespace ScreenDesigner
 
 				if (iLeftCur != 0)
 					Width = iLeftCur;
+				else if (ItemWidth != 0)
+					throw new Exception("Item element required when 'ItemWidth' attribute is set.");
 
 				base.Draw(DrawList, x, y);
 			}
@@ -511,7 +513,7 @@ namespace ScreenDesigner
 			}
 		}
 
-		class XmlImage : XmlGraphic
+		class XmlImage : XmlArea
 		{
 			public XmlImage()
 			{
@@ -549,8 +551,8 @@ namespace ScreenDesigner
 				Image image;
 
 				image = ((Image)Visual);
-				if (image.Source == null)
-					return;
+				if (image.Source == null && (Double.IsNaN(image.Height) || Double.IsNaN(image.Width)))
+					throw new Exception("Image source or height and width must be set.");
 
 				if (Double.IsNaN(image.Height))
 					image.Height = ((BitmapSource)image.Source).PixelHeight;
@@ -1144,7 +1146,16 @@ namespace ScreenDesigner
 			Element el;
 
 			el = BuildElement(node);
-			Components.Add(el.Name, el);
+			try
+			{
+				Components.Add(el.Name, el);
+			}
+			catch (Exception exc)
+			{
+				var info = (IXmlLineInfo)node;
+				string msg = exc.InnerException?.Message ?? exc.Message;
+				throw new CaughtException($"Error at line {info.LineNumber} while adding Component '{el.Name}':\n{msg}");
+			}
 		}
 
 		void DefineCanvas(XElement node)
