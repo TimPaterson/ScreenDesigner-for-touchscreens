@@ -54,7 +54,9 @@ namespace ScreenDesigner
 
 		const string StrFileLength		= "SCREEN_FILE_LENGTH";
 
+		const string StrStartColors		= "START_COLORS";
 		const string StrColor			= "DEFINE_COLOR";
+		const string StrEndColors		= "END_COLORS";
 
 		class BitmapInfo
 		{
@@ -117,7 +119,10 @@ namespace ScreenDesigner
 				Predefine2(StrStringValue);
 				Predefine0(StrEndStringValues);
 
+				Predefine0(StrStartColors);
 				Predefine2(StrColor);
+				Predefine0(StrEndColors);
+
 				Predefine1(StrFileLength);
 			}
 
@@ -250,7 +255,10 @@ namespace ScreenDesigner
 				Undefine(StrStringValue);
 				Undefine(StrEndStringValues);
 
+				Undefine(StrStartColors);
 				Undefine(StrColor);
+				Undefine(StrEndColors);
+
 				Undefine(StrFileLength);
 
 				Writer.Close();
@@ -347,8 +355,10 @@ namespace ScreenDesigner
 			if (Colors.Count > 0)
 			{
 				Writer.WriteLine();
+				DefineHead(StrStartColors, "");
 				foreach (var color in Colors)
-					DefineNamedValue(StrColor, color.Key, "0x" + color.Value.ToString("X6"));
+					DefineNamedValue("\t" + StrColor, color.Key, "0x" + color.Value.ToString("X6"));
+				DefineHead(StrEndColors, "");
 			}
 		}
 
@@ -363,7 +373,7 @@ namespace ScreenDesigner
 				{
 					if (val.Value is string)
 						continue;
-					Writer.WriteLine("\t" + StrValue + "({0}, {1})", val.Name, val.Value);
+					DefineNamedValue("\t" + StrValue, val.Name, val.Value);
 				}
 				DefineHead(StrEndValues, "");
 
@@ -373,7 +383,7 @@ namespace ScreenDesigner
 				foreach (ShowValue val in Values)
 				{
 					if (val.Value is string)
-						Writer.WriteLine("\t" + StrStringValue + "({0}, {1})", val.Name, val.Value);
+						DefineNamedValue("\t" + StrStringValue, val.Name, val.Value);
 				}
 				DefineHead(StrEndStringValues, "");
 			}

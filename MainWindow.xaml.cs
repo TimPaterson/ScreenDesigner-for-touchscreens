@@ -35,7 +35,10 @@ namespace ScreenDesigner
 
 		public MainWindow()
 		{
+			m_imageScale = new ScaleTransform(1, 1);
+
 			InitializeComponent();
+			scrMainImage.LayoutTransform = m_imageScale;
 
 			// Set up file watcher to detect if loaded file changes
 			m_watcher = new FileSystemWatcher();
@@ -59,6 +62,7 @@ namespace ScreenDesigner
 		List<KeyValuePair<string, int>> m_Colors;
 		List<ShowValue> m_Values;
 		Timer m_timer;
+		ScaleTransform m_imageScale;
 
 		#endregion
 
@@ -318,6 +322,8 @@ namespace ScreenDesigner
 				Settings.Default.SettingsUpgraded = true;
 				Settings.Default.Save();
 			}
+			m_imageScale.ScaleX = m_imageScale.ScaleY = Settings.Default.ImageScale / 100.0;
+			sldScale.Value = Settings.Default.ImageScale;
 		}
 
 		protected override void OnSourceInitialized(EventArgs e)
@@ -339,6 +345,7 @@ namespace ScreenDesigner
 		{
 			Settings.Default.MainWindowPlacement = this.GetPlacement();
 			Settings.Default.AutoSave = chkAutoSave.IsChecked == true;
+			Settings.Default.ImageScale = (int)Math.Round(sldScale.Value);
 			Settings.Default.Save();
 		}
 
@@ -387,6 +394,15 @@ namespace ScreenDesigner
 			{
 				Settings.Default.OutputFileFolder = dlg.SelectedPath;
 			}
+		}
+
+		private void sldScale_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+		{
+			double scale;
+
+			scale = Math.Round(sldScale.Value);
+			txtScale.Text = scale.ToString() + '%';
+			m_imageScale.ScaleX = m_imageScale.ScaleY = scale / 100;
 		}
 
 		#endregion

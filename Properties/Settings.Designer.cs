@@ -82,5 +82,17 @@ namespace ScreenDesigner.Properties {
                 this["AutoSave"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int ImageScale {
+            get {
+                return ((int)(this["ImageScale"]));
+            }
+            set {
+                this["ImageScale"] = value;
+            }
+        }
     }
 }
