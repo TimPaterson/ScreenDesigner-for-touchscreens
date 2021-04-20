@@ -23,7 +23,7 @@ namespace ScreenDesigner
 	public partial class MainWindow : Window
 	{
 		public const string StrTitle = "Screen Designer";
-		const string StrXmlSchemaPath = @"..\..\ScreenDesigner.xsd";
+		const string StrXmlSchemaPath = "ScreenDesigner.xsd";
 		const string StrXmlFileFilter = "XML Files|*.xml|All Files|*.*";
 		const int GroupExtraHeight = 25;
 		const int GroupExtraWidth = 12;
@@ -192,7 +192,7 @@ namespace ScreenDesigner
 
 			output = new FileGenerator();
 
-			if (Settings.Default.OutputFileFolder != null)
+			if (!string.IsNullOrEmpty(Settings.Default.OutputFileFolder))
 				path = Settings.Default.OutputFileFolder;
 			else
 				path = Path.GetDirectoryName(Settings.Default.XmlFileName);
@@ -338,7 +338,8 @@ namespace ScreenDesigner
 		private void Window_Loaded(object sender, RoutedEventArgs e)
 		{
 			chkAutoSave.IsChecked = Settings.Default.AutoSave;
-			LoadNewFile(Settings.Default.XmlFileName);
+			if (!string.IsNullOrEmpty(Settings.Default.XmlFileName))
+				LoadNewFile(Settings.Default.XmlFileName);
 		}
 
 		private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -383,7 +384,7 @@ namespace ScreenDesigner
 			string path;
 			Ookii.Dialogs.Wpf.VistaFolderBrowserDialog dlg;
 
-			if (Settings.Default.OutputFileFolder != null)
+			if (!string.IsNullOrEmpty(Settings.Default.OutputFileFolder))
 				path = Settings.Default.OutputFileFolder;
 			else
 				path = Path.GetDirectoryName(Settings.Default.XmlFileName);

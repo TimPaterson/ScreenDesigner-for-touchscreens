@@ -118,4 +118,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>xcopy $(ProjectDir)ScreenDesigner.xsd $(TargetDir) /Y</PostBuildEvent>
+  </PropertyGroup>
 </Project>
