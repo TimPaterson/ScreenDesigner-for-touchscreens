@@ -1,0 +1,131 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="http://www.timpaterson.com/schemas/ScreenDesigner.xsd">
+  <Set>
+    ScreenHeight = 320;
+    ScreenWidth = 200;
+  	BtnHeight = 60;
+  	BtnWidth = 60;
+  	KeySpace = 10;
+  	BtnFontSize = BtnHeight * 3 / 4;
+    KeypadHeight = BtnHeight * 4 + KeySpace * 3;
+    KeypadTop = ScreenHeight - KeypadHeight;
+    DisplayMargin = 5;
+    DisplayWidth = ScreenWidth - DisplayMargin * 2;
+    DisplayHeight = KeypadTop - DisplayMargin * 2;
+  </Set>
+  
+  <Font Name="BtnFont" FontSize="BtnFontSize" FontFamily="Arial"/>
+  <Color Name="DisplayBackcolor" Color="Yellow"/>
+  
+  <!-- Components -->
+  <Component Name="Display">
+    <Rectangle Area="Display" Height="DisplayHeight" Width="DisplayWidth" Left="DisplayMargin" Fill="DisplayBackcolor"/>
+  </Component>
+  
+  <Component Name="Keypad">
+    <Grid Top="0" Left="0" RowHeight="BtnHeight + KeySpace" ColumnWidth="BtnWidth + KeySpace">
+      <Default>
+        <Rectangle Name="Button" Height="BtnHeight" Width="BtnWidth" RadiusX="8" RadiusY="8" Fill="White">
+          <TextBlock Name="Label" Font="BtnFont" Foreground="Black"/>
+        </Rectangle>
+        <Set>
+          Button.Group = Digit;
+        </Set>
+      </Default>
+      <Row>
+        <Column>
+          <Set>
+            Label.Text = 7;
+            Button.HotSpot = Key_7;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 8;
+            Button.HotSpot = Key_8;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 9;
+            Button.HotSpot = Key_9;
+          </Set>
+        </Column>
+      </Row>
+      <Row>
+        <Column>
+          <Set>
+            Label.Text = 4;
+            Button.HotSpot = Key_4;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 5;
+            Button.HotSpot = Key_5;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 6;
+            Button.HotSpot = Key_6;
+          </Set>
+        </Column>
+      </Row>
+      <Row>
+        <Column>
+          <Set>
+            Label.Text = 1;
+            Button.HotSpot = Key_1;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 2;
+            Button.HotSpot = Key_2;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 3;
+            Button.HotSpot = Key_3;
+          </Set>
+        </Column>
+      </Row>
+      <Row>
+        <Column>
+          <Set>
+            Label.Text = ±;
+            Button.HotSpot = Key_sign;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = 0;
+            Button.HotSpot = Key_0;
+          </Set>
+        </Column>
+        <Column>
+          <Set>
+            Label.Text = ∙;
+            Button.HotSpot = Key_decimal;
+          </Set>
+        </Column>
+      </Row>
+    </Grid>
+  </Component>
+  
+  <Canvas Name="KeypadUp" Height="ScreenHeight" Width="ScreenWidth" ColorDepth="Color16bpp" Fill="Blue">
+    <Ref RefName="Keypad" Top="0"/>
+    <Ref RefName="Display" Top="KeypadHeight + DisplayMargin"/>
+  </Canvas>
+  
+  <Canvas Name="KeypadDown" Height="ScreenHeight" Width="ScreenWidth" ColorDepth="Color16bpp" Fill="LightGreen">
+    <Ref RefName="Display" Top="DisplayMargin"/>
+    <Ref RefName="Keypad" Top="KeypadTop">
+      <Set>Button.Fill = Black; Label.Foreground = White</Set>
+    </Ref>
+  </Canvas>
+  
+</Project>
