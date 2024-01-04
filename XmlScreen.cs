@@ -583,8 +583,9 @@ namespace ScreenDesigner
 		{
 			const string RegExpressionInt = "\\s*((\"(?<val>([^\"\\\\]|\\\\.)*)\")|(?<val>([^;\"\\\\]|\\\\.)+))";
 			const string RegExpressionStr = "\\s*(?<val>((\"(([^\"\\\\]|\\\\.)*)\")|([^;\"\\\\]|\\\\.)+)+)";
-			const string RegAssignInt = "(((?<ref>[a-zA-Z0-9_$]+)\\.)|(?<ref>.{0}))(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpressionInt;
-			const string RegAssignStr = "(((?<ref>[a-zA-Z0-9_$]+)\\.)|(?<ref>.{0}))(?<attr>[a-zA-Z0-9_$]+)\\s*=" + RegExpressionStr;
+			const string RegLeftSide = "(((?<ref>[a-zA-Z0-9_$]+)\\.)|(?<ref>.{0}))(?<attr>[a-zA-Z0-9_$]+)\\s*=";
+			const string RegAssignInt = RegLeftSide + RegExpressionInt;
+			const string RegAssignStr = RegLeftSide + RegExpressionStr;
 
 			static Regex s_regExpressionInt = new Regex("^" + RegExpressionInt + "\\s*$");
 			static Regex s_regExpressionStr = new Regex("^" + RegExpressionStr + "\\s*$");
@@ -687,7 +688,7 @@ namespace ScreenDesigner
 						el.Top += iRowCur;
 						iRowCur = el.Top + RowHeight;
 					}
-					else if (el.Graphic as XmlDefault != null)
+					else if (el.Graphic is XmlDefault)
 						el.Children.Clear();
 				}
 			}
@@ -711,7 +712,11 @@ namespace ScreenDesigner
 				foreach (Element el in Owner.Children)
 				{
 					if ((el.Graphic as XmlDefault)?.IsCopy == false)
-						continue;       // Ignore original Row default
+					{
+						// Ignore original Row default
+						el.Children.Clear();
+						continue;
+					}
 					el.Left += iColCur;
 					iColCur = iColWidth + el.Left;
 				}
@@ -729,7 +734,7 @@ namespace ScreenDesigner
 
 					// Row may have default content
 					content = value.Parent;
-					if (content.Children.Count == 0 || (content.Children[0].Graphic as XmlDefault)?.IsCopy == true)
+					if (content.Children.Count == 0 || (content.Children[0].Graphic as XmlDefault)?.IsCopy != false)
 						content = value.Parent.Parent;  // Move up to Grid
 
 					if (content.Children.Count != 0)
